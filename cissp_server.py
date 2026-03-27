@@ -113,6 +113,16 @@ def init_db():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS claude_cache (
+            q_id        INTEGER NOT NULL,
+            is_correct  INTEGER NOT NULL,
+            response    TEXT NOT NULL,
+            created_at  TEXT NOT NULL,
+            PRIMARY KEY (q_id, is_correct)
+        )
+    """)
+
     conn.commit()
     conn.close()
     print(f"  ✅ Database ready: {DB_PATH}")
@@ -278,6 +288,34 @@ def get_history(domain_id=None, limit=200):
     conn.close()
     return rows
 
+# ─── Claude Cache ─────────────────────────────────────────────────────────────
+
+def get_claude_cache(q_id, is_correct):
+    """Return cached Claude response dict, or None if not cached."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT response FROM claude_cache WHERE q_id=? AND is_correct=?",
+              (q_id, 1 if is_correct else 0))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        try:
+            return json.loads(row["response"])
+        except Exception:
+            return None
+    return None
+
+def set_claude_cache(q_id, is_correct, response_dict):
+    """Store a Claude response dict in the cache."""
+    conn = get_db()
+    today = datetime.now().date().isoformat()
+    conn.execute("""
+        INSERT OR REPLACE INTO claude_cache (q_id, is_correct, response, created_at)
+        VALUES (?, ?, ?, ?)
+    """, (q_id, 1 if is_correct else 0, json.dumps(response_dict), today))
+    conn.commit()
+    conn.close()
+
 # ─── Claude Handlers ──────────────────────────────────────────────────────────
 
 def handle_claude_explain(body):
@@ -286,6 +324,7 @@ def handle_claude_explain(body):
     if not api_key:
         return {"error": "No API key configured. Add your Claude API key in Settings."}, 400
 
+    q_id = body.get("qId")
     question = body.get("question", "")
     options = body.get("options", [])
     correct_answer = body.get("correctAnswer", "")
@@ -293,6 +332,13 @@ def handle_claude_explain(body):
     is_correct = body.get("isCorrect", False)
     domain = body.get("domain", "")
     existing_explanation = body.get("existingExplanation", "")
+
+    # Check SQLite cache first — avoids an API call if already answered before
+    if q_id is not None:
+        cached = get_claude_cache(q_id, is_correct)
+        if cached:
+            cached["_cached"] = True   # flag so the UI can show a cache indicator
+            return cached, 200
 
     system_prompt = (
         "You are an expert CISSP exam coach with deep knowledge of all 8 CISSP domains. "
@@ -350,11 +396,15 @@ Return ONLY valid JSON, no markdown code blocks."""
         text = resp["content"][0]["text"].strip()
         try:
             parsed = json.loads(text)
-            return parsed, 200
         except json.JSONDecodeError:
-            fallback = {"whyCorrect": text, "whyWrong": "", "studyFocus": "", "memoryTip": ""} if is_correct \
-                  else {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}
-            return fallback, 200
+            parsed = {"whyCorrect": text, "whyWrong": "", "studyFocus": "", "memoryTip": ""} if is_correct \
+                else {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}
+
+        # Persist to SQLite so future requests for same question skip the API
+        if q_id is not None:
+            set_claude_cache(q_id, is_correct, parsed)
+
+        return parsed, 200
     except urllib.error.HTTPError as e:
         body_err = e.read().decode()
         return {"error": f"Claude API error: {e.code} — {body_err}"}, 502

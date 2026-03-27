@@ -1540,6 +1540,7 @@ async function askClaudeExplain(q, selectedIdx) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        qId: q.id,
         question: q.text,
         options: q.options,
         correctAnswer: q.options[q.answer],
@@ -1593,7 +1594,10 @@ function claudeFieldToHtml(value) {
 
 function renderClaudeExplanation(area, data, isCorrect) {
   const title = isCorrect ? '🤖 Claude\'s Analysis — Correct Answer' : '🤖 Claude\'s Deep Explanation';
-  let html = `<div class="claude-card"><h5>${title}</h5>`;
+  const cachedBadge = data._cached
+    ? `<span style="margin-left:8px;font-size:0.72rem;font-weight:600;background:#e0f2e9;color:#1a6b3a;padding:2px 8px;border-radius:10px;vertical-align:middle;">💾 From DB cache</span>`
+    : '';
+  let html = `<div class="claude-card"><h5>${title}${cachedBadge}</h5>`;
   if (isCorrect) {
     if (data.whyCorrect) {
       html += `<div class="claude-section"><div class="claude-label">✅ Why This Answer Is Right</div>${claudeFieldToHtml(data.whyCorrect)}</div>`;
