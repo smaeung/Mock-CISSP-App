@@ -352,7 +352,10 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
           </div>
           <div class="quiz-controls">
             <button class="btn btn-secondary" onclick="quitQuiz()">✕ Quit</button>
-            <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()" disabled>Next →</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary" id="btn-back" onclick="prevQuestion()" disabled>← Back</button>
+              <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()" disabled>Next →</button>
+            </div>
           </div>
         </div>
       </div>
@@ -944,6 +947,45 @@ function launchQuiz() {
   renderQuestion();
 }
 
+// Build explanation HTML — shared by selectAnswer and restoreAnsweredState
+function buildExplanationHtml(q, selectedIdx, isCorrect) {
+  let html = `<div class="explanation-box">
+    <h4>${isCorrect ? '✅ Correct!' : '❌ Incorrect'} — Explanation</h4>
+    <p>${q.explanation}</p>`;
+  if (!isCorrect) {
+    html += `<div class="weakness"><h5>⚠️ Knowledge Gap / Risk:</h5><p>${q.weakness}</p></div>`;
+  }
+  if (q.refs && q.refs.length > 0) {
+    html += `<div class="refs"><h5>📚 Study References:</h5>`;
+    q.refs.forEach(r => {
+      html += `<a href="${r.url}" target="_blank">→ ${r.text}</a>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  if (USE_BACKEND && hasApiKey) {
+    const btnLabel = isCorrect
+      ? '🤖 Ask Claude — Why is this correct?'
+      : '🤖 Ask Claude — Why was I wrong?';
+    html += `<button class="claude-btn" id="btn-ask-claude" onclick="askClaudeExplain(${JSON.stringify(q).replace(/"/g, '&quot;')}, ${selectedIdx})">${btnLabel}</button>`;
+    html += `<div id="claude-explanation-area"></div>`;
+  }
+  return html;
+}
+
+// Restore the answered state when navigating back to a previously answered question
+function restoreAnsweredState(q, selectedIdx, isCorrect) {
+  const options = document.querySelectorAll('.option');
+  options.forEach(o => { o.classList.add('disabled'); o.onclick = null; });
+  options[selectedIdx].classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) options[q.answer].classList.add('correct');
+
+  const expDiv = document.getElementById('q-explanation');
+  expDiv.style.display = 'block';
+  expDiv.innerHTML = buildExplanationHtml(q, selectedIdx, isCorrect);
+  document.getElementById('btn-next').disabled = false;
+}
+
 function renderQuestion() {
   if (currentQIndex >= quizQuestions.length) {
     showResults();
@@ -961,8 +1003,20 @@ function renderQuestion() {
   document.getElementById('q-explanation').style.display = 'none';
   document.getElementById('btn-next').disabled = true;
 
+  // Back button: enabled only when not on the first question
+  const btnBack = document.getElementById('btn-back');
+  if (btnBack) btnBack.disabled = (currentQIndex === 0);
+
+  // Next button label: last answered question shows "Finish" instead of "Next"
+  const btnNext = document.getElementById('btn-next');
+  const isLastAnswered = currentQIndex === quizQuestions.length - 1 && quizAnswers[currentQIndex] !== undefined;
+  if (btnNext) btnNext.textContent = isLastAnswered ? 'Finish ✓' : 'Next →';
+
   const correctSoFar = quizAnswers.filter(a => a.correct).length;
-  document.getElementById('quiz-score-live').textContent = currentQIndex > 0 ? `Score: ${correctSoFar}/${currentQIndex} (${Math.round(correctSoFar/currentQIndex*100)}%)` : '';
+  const answeredSoFar = quizAnswers.length;
+  document.getElementById('quiz-score-live').textContent = answeredSoFar > 0
+    ? `Score: ${correctSoFar}/${answeredSoFar} (${Math.round(correctSoFar/answeredSoFar*100)}%)`
+    : '';
 
   const letters = ['A','B','C','D'];
   const optContainer = document.getElementById('q-options');
@@ -974,6 +1028,12 @@ function renderQuestion() {
     div.onclick = () => selectAnswer(i, q);
     optContainer.appendChild(div);
   });
+
+  // If this question was already answered, restore the answered state
+  const previousAnswer = quizAnswers[currentQIndex];
+  if (previousAnswer !== undefined) {
+    restoreAnsweredState(q, previousAnswer.selected, previousAnswer.correct);
+  }
 }
 
 function selectAnswer(selectedIdx, q) {
@@ -984,37 +1044,19 @@ function selectAnswer(selectedIdx, q) {
   options[selectedIdx].classList.add(isCorrect ? 'correct' : 'wrong');
   if (!isCorrect) options[q.answer].classList.add('correct');
 
-  quizAnswers.push({ qId: q.id, domainId: q.domain, correct: isCorrect, selected: selectedIdx });
-  recordAnswer(q.id, q.domain, isCorrect, q);
+  // Only record if this is a fresh answer (not re-viewing a previous one)
+  if (quizAnswers[currentQIndex] === undefined) {
+    quizAnswers[currentQIndex] = { qId: q.id, domainId: q.domain, correct: isCorrect, selected: selectedIdx };
+    recordAnswer(q.id, q.domain, isCorrect, q);
+  }
 
-  // Show explanation
   const expDiv = document.getElementById('q-explanation');
   expDiv.style.display = 'block';
-  let html = `<div class="explanation-box">
-    <h4>${isCorrect ? '✅ Correct!' : '❌ Incorrect'} — Explanation</h4>
-    <p>${q.explanation}</p>`;
-  if (!isCorrect) {
-    html += `<div class="weakness"><h5>⚠️ Knowledge Gap / Risk:</h5><p>${q.weakness}</p></div>`;
-  }
-  if (q.refs && q.refs.length > 0) {
-    html += `<div class="refs"><h5>📚 Study References:</h5>`;
-    q.refs.forEach(r => {
-      html += `<a href="${r.url}" target="_blank">→ ${r.text}</a>`;
-    });
-    html += '</div>';
-  }
-  html += '</div>';
-  // Add "Ask Claude" button for all answers when backend + API key available
-  if (USE_BACKEND && hasApiKey) {
-    const btnLabel = isCorrect
-      ? '🤖 Ask Claude — Why is this correct?'
-      : '🤖 Ask Claude — Why was I wrong?';
-    html += `<button class="claude-btn" id="btn-ask-claude" onclick="askClaudeExplain(${JSON.stringify(q).replace(/"/g, '&quot;')}, ${selectedIdx})">${btnLabel}</button>`;
-    html += `<div id="claude-explanation-area"></div>`;
-  }
-  expDiv.innerHTML = html;
+  expDiv.innerHTML = buildExplanationHtml(q, selectedIdx, isCorrect);
 
-  document.getElementById('btn-next').disabled = false;
+  const btnNext = document.getElementById('btn-next');
+  btnNext.disabled = false;
+  btnNext.textContent = (currentQIndex === quizQuestions.length - 1) ? 'Finish ✓' : 'Next →';
 }
 
 function nextQuestion() {
@@ -1022,9 +1064,16 @@ function nextQuestion() {
   renderQuestion();
 }
 
+function prevQuestion() {
+  if (currentQIndex > 0) {
+    currentQIndex--;
+    renderQuestion();
+  }
+}
+
 function quitQuiz() {
   if (confirm('Quit this quiz? Progress so far will be saved.')) {
-    if (quizAnswers.length > 0) showResults();
+    if (quizAnswers.filter(Boolean).length > 0) showResults();
     else {
       document.getElementById('quiz-setup').style.display = 'block';
       document.getElementById('quiz-active').style.display = 'none';
@@ -1036,8 +1085,9 @@ function showResults() {
   document.getElementById('quiz-active').style.display = 'none';
   document.getElementById('quiz-results').style.display = 'block';
 
-  const total = quizAnswers.length;
-  const correct = quizAnswers.filter(a => a.correct).length;
+  const answered = quizAnswers.filter(Boolean);
+  const total = answered.length;
+  const correct = answered.filter(a => a.correct).length;
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
   const pass = pct >= 70;
 
@@ -1051,7 +1101,7 @@ function showResults() {
 
   // Per-domain breakdown
   const byDomain = {};
-  quizAnswers.forEach(a => {
+  answered.forEach(a => {
     if (!byDomain[a.domainId]) byDomain[a.domainId] = { correct: 0, total: 0 };
     byDomain[a.domainId].total++;
     if (a.correct) byDomain[a.domainId].correct++;
