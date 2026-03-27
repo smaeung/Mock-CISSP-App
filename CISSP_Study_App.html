@@ -1566,30 +1566,54 @@ async function askClaudeExplain(q, selectedIdx) {
   }
 }
 
+// Convert any Claude field value to safe HTML — handles strings, arrays, and objects
+function claudeFieldToHtml(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return `<p>${value}</p>`;
+  if (Array.isArray(value)) {
+    // Array of strings → bullet list
+    // Array of objects → render each object's values as bullet items
+    return '<ul style="margin:6px 0 0 18px;font-size:0.87rem;line-height:1.8;">' +
+      value.map(item => {
+        if (typeof item === 'string') return `<li>${item}</li>`;
+        // Object like {option:"A", reason:"..."} or {A:"..."}
+        const parts = Object.entries(item).map(([k, v]) => `<strong>${k}:</strong> ${v}`);
+        return `<li>${parts.join(' — ')}</li>`;
+      }).join('') + '</ul>';
+  }
+  if (typeof value === 'object') {
+    // Plain object like { A: "reason", B: "reason" }
+    return '<ul style="margin:6px 0 0 18px;font-size:0.87rem;line-height:1.8;">' +
+      Object.entries(value).map(([k, v]) =>
+        `<li><strong>${k}:</strong> ${v}</li>`
+      ).join('') + '</ul>';
+  }
+  return `<p>${String(value)}</p>`;
+}
+
 function renderClaudeExplanation(area, data, isCorrect) {
   const title = isCorrect ? '🤖 Claude\'s Analysis — Correct Answer' : '🤖 Claude\'s Deep Explanation';
-  let html = `<div class="claude-card">
-    <h5>${title}</h5>`;
+  let html = `<div class="claude-card"><h5>${title}</h5>`;
   if (isCorrect) {
     if (data.whyCorrect) {
-      html += `<div class="claude-section"><div class="claude-label">✅ Why This Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+      html += `<div class="claude-section"><div class="claude-label">✅ Why This Answer Is Right</div>${claudeFieldToHtml(data.whyCorrect)}</div>`;
     }
     if (data.whyWrong) {
-      html += `<div class="claude-section"><div class="claude-label">❌ Why the Other Options Are Wrong</div><p>${data.whyWrong}</p></div>`;
+      html += `<div class="claude-section"><div class="claude-label">❌ Why the Other Options Are Wrong</div>${claudeFieldToHtml(data.whyWrong)}</div>`;
     }
   } else {
     if (data.whyWrong) {
-      html += `<div class="claude-section"><div class="claude-label">❌ Why Your Answer Was Wrong</div><p>${data.whyWrong}</p></div>`;
+      html += `<div class="claude-section"><div class="claude-label">❌ Why Your Answer Was Wrong</div>${claudeFieldToHtml(data.whyWrong)}</div>`;
     }
     if (data.whyCorrect) {
-      html += `<div class="claude-section"><div class="claude-label">✅ Why the Correct Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+      html += `<div class="claude-section"><div class="claude-label">✅ Why the Correct Answer Is Right</div>${claudeFieldToHtml(data.whyCorrect)}</div>`;
     }
   }
   if (data.studyFocus) {
-    html += `<div class="claude-section"><div class="claude-label">📚 What to Study</div><p>${data.studyFocus}</p></div>`;
+    html += `<div class="claude-section"><div class="claude-label">📚 What to Study</div>${claudeFieldToHtml(data.studyFocus)}</div>`;
   }
   if (data.memoryTip) {
-    html += `<div class="claude-section"><div class="claude-label">💡 Memory Tip</div><div class="memory-tip">${data.memoryTip}</div></div>`;
+    html += `<div class="claude-section"><div class="claude-label">💡 Memory Tip</div><div class="memory-tip">${typeof data.memoryTip === 'string' ? data.memoryTip : JSON.stringify(data.memoryTip)}</div></div>`;
   }
   html += '</div>';
   area.innerHTML = html;

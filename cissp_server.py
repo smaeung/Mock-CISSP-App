@@ -316,11 +316,12 @@ Study guide explanation: {existing_explanation}
 
 The student got this right. Now give them a deeper understanding:
 1. WHY THIS IS CORRECT: The precise CISSP principle or framework concept that makes this the right answer
-2. WHY THE OTHERS ARE WRONG: For each wrong option, briefly explain the specific misconception or trap it represents
+2. WHY THE OTHERS ARE WRONG: In a single paragraph, explain the misconception or trap behind each wrong option
 3. STUDY FOCUS: The key CISSP concepts, standards (NIST SP, ISO, (ISC)²), or frameworks that this question tests — to reinforce mastery
 4. MEMORY TIP: One memorable phrase or analogy to lock this in for exam day
 
-Format as JSON with keys: "whyCorrect", "whyWrong", "studyFocus", "memoryTip"
+IMPORTANT: All four values must be plain strings — no arrays, no nested objects.
+Format as JSON: {{"whyCorrect": "...", "whyWrong": "...", "studyFocus": "...", "memoryTip": "..."}}
 Return ONLY valid JSON, no markdown code blocks."""
     else:
         user_message = f"""CISSP Question from Domain: {domain}
