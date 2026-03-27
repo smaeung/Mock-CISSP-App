@@ -1,0 +1,24 @@
+# CISSP Study App — gitignore
+
+# SQLite database (local user data)
+cissp_study.db
+
+# Claude API key (never commit this)
+cissp_config.json
+
+# Progress exports
+cissp_progress_*.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Editor
+.vscode/
+.idea/
+*.swp

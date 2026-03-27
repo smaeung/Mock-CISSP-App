@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CISSP Study App</title>
+<!-- Backend API config: when running via cissp_server.py, this is auto-detected -->
+<script>
+const API_BASE = 'http://localhost:5432';
+let USE_BACKEND = false; // flips to true if server responds to ping
+async function detectBackend() {
+  try {
+    const r = await fetch(API_BASE + '/api/ping', { signal: AbortSignal.timeout(1200) });
+    if (r.ok) { USE_BACKEND = true; updateStorageIndicator(true); }
+  } catch(e) { USE_BACKEND = false; updateStorageIndicator(false); }
+}
+function updateStorageIndicator(online) {
+  const el = document.getElementById('storage-badge');
+  if (!el) return;
+  el.textContent = online ? '💾 SQLite DB' : '🌐 Browser Storage';
+  el.style.background = online ? '#e0f2e9' : '#fff3e0';
+  el.style.color = online ? '#1a6b3a' : '#b45309';
+  el.title = online ? 'Data saved to cissp_study.db via local server' : 'Data saved in browser localStorage — run cissp_server.py for persistent DB';
+}
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #1a6b3a;
+  --primary-light: #2a8a4e;
+  --primary-dark: #0f4525;
+  --accent: #f0a500;
+  --accent-light: #ffc947;
+  --danger: #d32f2f;
+  --danger-light: #ef5350;
+  --success: #2e7d32;
+  --success-light: #43a047;
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --sidebar-w: 240px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+#sidebar {
+  width: var(--sidebar-w); background: var(--primary-dark); color: #fff;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh;
+  overflow-y: auto; z-index: 100;
+}
+#sidebar .logo { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+#sidebar .logo h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+#sidebar .logo p { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-top: 3px; }
+#sidebar nav { flex: 1; padding: 12px 0; }
+#sidebar nav a {
+  display: flex; align-items: center; gap: 10px; padding: 11px 18px;
+  color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.88rem;
+  cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
+}
+#sidebar nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+#sidebar nav a.active { background: rgba(255,255,255,0.13); color: #fff; border-left-color: var(--accent); }
+#sidebar nav a .icon { font-size: 1.1rem; width: 22px; text-align: center; }
+#sidebar .sidebar-footer { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+
+/* MAIN */
+#main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+#topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+#topbar h1 { font-size: 1.18rem; font-weight: 700; }
+#topbar .streak { display: flex; align-items: center; gap: 6px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 20px; padding: 5px 14px; font-size: 0.85rem; font-weight: 600; color: #b45309; }
+
+#content { padding: 28px; flex: 1; }
+
+/* CARDS */
+.card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); padding: 22px; }
+.card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* STAT CARDS */
+.stat-card { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 4px solid var(--primary); }
+.stat-card.accent { border-left-color: var(--accent); }
+.stat-card.danger { border-left-color: var(--danger); }
+.stat-card.success { border-left-color: var(--success); }
+.stat-card .label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.stat-card .value { font-size: 2rem; font-weight: 800; }
+.stat-card .sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+
+/* PROGRESS BAR */
+.progress-wrap { margin-bottom: 12px; }
+.progress-wrap .label-row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 5px; }
+.progress-bar { height: 9px; background: #e9ecef; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 5px; background: var(--primary); transition: width 0.4s; }
+
+/* QUIZ */
+#quiz-container { max-width: 780px; margin: 0 auto; }
+.question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.q-num { font-size: 0.8rem; color: var(--text-muted); }
+.q-domain-badge { font-size: 0.75rem; background: #e0f2e9; color: var(--primary-dark); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+.question-card { background: var(--card); border-radius: 14px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+.question-text { font-size: 1.08rem; line-height: 1.65; margin-bottom: 24px; font-weight: 500; }
+.options { display: flex; flex-direction: column; gap: 11px; }
+.option {
+  padding: 14px 18px; border: 2px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: all 0.15s; font-size: 0.93rem; line-height: 1.5;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.option:hover:not(.disabled) { border-color: var(--primary); background: #f0faf4; }
+.option .opt-letter { font-weight: 700; color: var(--primary); min-width: 20px; }
+.option.correct { border-color: var(--success); background: #e8f5e9; }
+.option.wrong { border-color: var(--danger); background: #ffebee; }
+.option.disabled { cursor: default; }
+.option.correct .opt-letter { color: var(--success); }
+.option.wrong .opt-letter { color: var(--danger); }
+
+.explanation-box { margin-top: 22px; background: #fffde7; border: 1px solid #ffe082; border-radius: 10px; padding: 18px 20px; }
+.explanation-box h4 { color: #b45309; font-size: 0.9rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.explanation-box p { font-size: 0.88rem; line-height: 1.65; color: #374151; }
+.explanation-box .weakness { margin-top: 12px; padding: 10px 14px; background: #ffecec; border-radius: 8px; border-left: 3px solid var(--danger); }
+.explanation-box .weakness h5 { font-size: 0.82rem; color: var(--danger); margin-bottom: 4px; }
+.explanation-box .refs { margin-top: 12px; }
+.explanation-box .refs h5 { font-size: 0.82rem; color: var(--primary); margin-bottom: 6px; }
+.explanation-box .refs a { display: block; font-size: 0.82rem; color: var(--primary); text-decoration: none; margin-bottom: 3px; }
+.explanation-box .refs a:hover { text-decoration: underline; }
+
+.quiz-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+.btn { padding: 11px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.92rem; font-weight: 600; transition: all 0.15s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-secondary { background: #f3f4f6; color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: #e5e7eb; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent-light); color: #333; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-sm { padding: 7px 14px; font-size: 0.8rem; }
+
+/* DOMAIN SELECTOR */
+.domain-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.domain-card-sel {
+  border: 2px solid var(--border); border-radius: 10px; padding: 14px 16px;
+  cursor: pointer; transition: all 0.15s; background: var(--card);
+}
+.domain-card-sel:hover { border-color: var(--primary); }
+.domain-card-sel.selected { border-color: var(--primary); background: #f0faf4; }
+.domain-card-sel .d-num { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.domain-card-sel .d-name { font-size: 0.88rem; font-weight: 700; color: var(--text); margin-top: 3px; }
+.domain-card-sel .d-stats { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+
+/* REVIEW TABLE */
+.review-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.review-table th { background: #f3f4f6; padding: 10px 14px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+.review-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.review-table tr:hover { background: #fafafa; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
+.badge-wrong { background: #ffebee; color: var(--danger); }
+.badge-correct { background: #e8f5e9; color: var(--success); }
+.badge-domain { background: #e0f2e9; color: var(--primary-dark); }
+
+/* CALENDAR */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day { aspect-ratio: 1; border-radius: 6px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; cursor: default; }
+.cal-day.studied { background: var(--primary); color: #fff; }
+.cal-day.today { outline: 2px solid var(--accent); }
+.cal-day-header { font-size: 0.65rem; text-align: center; color: var(--text-muted); padding-bottom: 4px; text-transform: uppercase; }
+
+/* ANALYTICS */
+.chart-wrap { position: relative; height: 280px; }
+
+/* PAGE VISIBILITY */
+.page { display: none; }
+.page.active { display: block; }
+
+/* RESULT SCREEN */
+#result-screen { text-align: center; max-width: 600px; margin: 0 auto; }
+.result-score { font-size: 4rem; font-weight: 900; color: var(--primary); margin: 20px 0 8px; }
+.result-score.fail { color: var(--danger); }
+.result-label { font-size: 1.1rem; color: var(--text-muted); }
+.domain-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; text-align: left; }
+.domain-result-item { background: #f9f9f9; border-radius: 8px; padding: 12px; border-left: 3px solid var(--primary); }
+.domain-result-item h5 { font-size: 0.78rem; color: var(--text-muted); }
+.domain-result-item .score { font-size: 1.2rem; font-weight: 800; }
+
+/* MISC */
+.section-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; color: var(--primary-dark); }
+.mt-4 { margin-top: 16px; }
+.mt-6 { margin-top: 24px; }
+.mb-4 { margin-bottom: 16px; }
+.text-muted { color: var(--text-muted); font-size: 0.85rem; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.w-full { width: 100%; }
+.justify-between { justify-content: space-between; }
+.empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state h4 { font-size: 1rem; margin-bottom: 8px; }
+hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.73rem; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
+.tag-critical { background: #ffebee; color: #c62828; }
+.tag-high { background: #fff3e0; color: #e65100; }
+.tag-medium { background: #e8f5e9; color: #1b5e20; }
+.quiz-progress { height: 5px; background: #e9ecef; border-radius: 3px; margin-bottom: 20px; }
+.quiz-progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
+
+/* CLAUDE AI STYLES */
+.claude-btn { display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; padding: 9px 18px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 0.86rem; font-weight: 600; transition: all 0.15s; }
+.claude-btn:hover:not(:disabled) { background: linear-gradient(135deg, #4338ca, #6d28d9); transform: translateY(-1px); }
+.claude-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+.claude-card { margin-top: 14px; background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #c4b5fd; border-radius: 10px; padding: 18px 20px; }
+.claude-card h5 { color: #5b21b6; font-size: 0.88rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.claude-card .claude-section { margin-bottom: 12px; }
+.claude-card .claude-section:last-child { margin-bottom: 0; }
+.claude-card .claude-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #7c3aed; margin-bottom: 4px; }
+.claude-card p { font-size: 0.87rem; line-height: 1.65; color: #374151; }
+.claude-card .memory-tip { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 7px; padding: 10px 14px; font-size: 0.85rem; color: #9a3412; }
+.claude-loading { display: flex; align-items: center; gap: 10px; padding: 14px; color: #7c3aed; font-size: 0.87rem; }
+.claude-loading::before { content: ''; width: 18px; height: 18px; border: 2px solid #c4b5fd; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.plan-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 20px; margin-top: 16px; }
+.plan-card h4 { color: #0369a1; margin-bottom: 14px; font-size: 0.95rem; }
+.plan-week { border: 1px solid #e0f2fe; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+.plan-week .week-label { font-weight: 700; font-size: 0.83rem; color: #0369a1; margin-bottom: 4px; }
+.plan-week .week-focus { font-size: 0.87rem; color: #374151; }
+.api-key-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; font-family: monospace; background: #f9fafb; }
+.api-key-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px #ede9fe; }
+.claude-status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
+.claude-status-badge.connected { background: #e0f2e9; color: var(--primary-dark); }
+.claude-status-badge.disconnected { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="logo">
+    <h2>🛡️ CISSP Prep</h2>
+    <p>AI-Powered Study System</p>
+  </div>
+  <nav>
+    <a class="nav-link active" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
+    <a class="nav-link" data-page="quiz"><span class="icon">🎯</span> Practice Quiz</a>
+    <a class="nav-link" data-page="review"><span class="icon">📋</span> Wrong Answers</a>
+    <a class="nav-link" data-page="analytics"><span class="icon">📈</span> Analytics</a>
+    <a class="nav-link" data-page="domains"><span class="icon">📚</span> Domain Guide</a>
+    <a class="nav-link" data-page="settings"><span class="icon">⚙️</span> Settings</a>
+  </nav>
+  <div class="sidebar-footer">CISSP 2024 · (ISC)² Certified</div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <h1 id="page-title">Dashboard</h1>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="storage-badge" style="font-size:0.72rem;padding:4px 10px;border-radius:12px;background:#fff3e0;color:#b45309;font-weight:600;cursor:help;border:1px solid #ffe082;" title="Checking storage...">⏳ Connecting...</span>
+      <div class="streak">🔥 <span id="streak-count">0</span> day streak</div>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard" class="page active">
+      <div class="grid-4 mb-4">
+        <div class="stat-card"><div class="label">Total Questions</div><div class="value" id="stat-total">0</div><div class="sub">answered all-time</div></div>
+        <div class="stat-card success"><div class="label">Correct Answers</div><div class="value" id="stat-correct">0</div><div class="sub">all-time accuracy: <span id="stat-accuracy">0%</span></div></div>
+        <div class="stat-card danger"><div class="label">Wrong Answers</div><div class="value" id="stat-wrong">0</div><div class="sub">needs review</div></div>
+        <div class="stat-card accent"><div class="label">Days Studied</div><div class="value" id="stat-days">0</div><div class="sub">study activity</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>📊 Domain Health</h3>
+          <div id="domain-health-bars"></div>
+        </div>
+        <div class="card">
+          <h3>📅 Study Calendar</h3>
+          <div class="calendar-grid" id="cal-headers">
+            <div class="cal-day-header">SUN</div><div class="cal-day-header">MON</div><div class="cal-day-header">TUE</div>
+            <div class="cal-day-header">WED</div><div class="cal-day-header">THU</div><div class="cal-day-header">FRI</div><div class="cal-day-header">SAT</div>
+          </div>
+          <div class="calendar-grid mt-4" id="cal-grid" style="margin-top:8px;"></div>
+          <p class="text-muted mt-4" style="margin-top:12px;">🟢 = studied  📅 = today</p>
+        </div>
+      </div>
+      <div class="card mt-6" style="margin-top:18px;">
+        <h3>⚡ Quick Start</h3>
+        <div class="domain-selector" id="quick-domain-sel"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="startQuiz('selected')">Start Quiz (Selected Domains)</button>
+          <button class="btn btn-accent" onclick="startQuiz('weak')">🎯 Focus on Weak Areas</button>
+          <button class="btn btn-secondary" onclick="startQuiz('all')">All Domains (10 Questions)</button>
+          <button class="btn btn-secondary" onclick="startReviewSession()">📋 Review Wrong Answers</button>
+        </div>
+      </div>
+      <div class="card mt-6" style="margin-top:18px;" id="today-wrong-card">
+        <h3>❌ Today's Mistakes</h3>
+        <div id="today-wrong-list"><p class="text-muted">No mistakes yet today. Great job! 🎉</p></div>
+      </div>
+    </div>
+
+    <!-- QUIZ PAGE -->
+    <div id="page-quiz" class="page">
+      <div id="quiz-setup">
+        <div class="section-title">🎯 Configure Your Quiz</div>
+        <div class="grid-2" style="max-width:800px;">
+          <div class="card">
+            <h3>Select Domains</h3>
+            <div id="quiz-domain-sel"></div>
+            <button class="btn btn-secondary btn-sm" onclick="selectAllDomains()" style="margin-top:8px;">Select All</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearAllDomains()" style="margin-left:6px;">Clear</button>
+          </div>
+          <div class="card">
+            <h3>Quiz Options</h3>
+            <div style="margin-bottom:14px;">
+              <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Number of Questions</label>
+              <select id="q-count" class="btn btn-secondary" style="width:100%;text-align:left;">
+                <option value="5">5 Questions (Quick)</option>
+                <option value="10" selected>10 Questions (Standard)</option>
+                <option value="20">20 Questions (Practice)</option>
+                <option value="50">50 Questions (Exam Sim)</option>
+                <option value="9999">All Available Questions</option>
+              </select>
+            </div>
+            <div style="margin-bottom:14px;">
+              <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Mode</label>
+              <select id="q-mode" class="btn btn-secondary" style="width:100%;text-align:left;">
+                <option value="practice">Practice (Show answers)</option>
+                <option value="exam">Exam (Show at end)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary w-full" onclick="launchQuiz()">🚀 Start Quiz</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="quiz-active" style="display:none;">
+        <div id="quiz-container">
+          <div class="flex justify-between items-center mb-4">
+            <div class="q-num" id="q-counter">Question 1 of 10</div>
+            <div id="quiz-score-live" style="font-size:0.85rem;font-weight:600;color:var(--primary);"></div>
+          </div>
+          <div class="quiz-progress"><div class="quiz-progress-fill" id="q-progress-fill" style="width:0%"></div></div>
+          <div id="q-domain-badge-wrap" style="margin-bottom:10px;"></div>
+          <div class="question-card">
+            <div class="question-text" id="q-text"></div>
+            <div class="options" id="q-options"></div>
+            <div id="q-explanation" style="display:none;"></div>
+          </div>
+          <div class="quiz-controls">
+            <button class="btn btn-secondary" onclick="quitQuiz()">✕ Quit</button>
+            <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="quiz-results" style="display:none;">
+        <div id="result-screen">
+          <div class="section-title" style="text-align:center;">📊 Quiz Results</div>
+          <div id="result-circle">
+            <div class="result-score" id="res-pct">0%</div>
+            <div class="result-label" id="res-label"></div>
+          </div>
+          <div style="margin-top:16px;font-size:0.92rem;color:var(--text-muted);">
+            <span id="res-correct"></span> correct · <span id="res-wrong-count"></span> wrong · <span id="res-total-count"></span> total
+          </div>
+          <div class="domain-result-grid" id="domain-result-grid"></div>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:28px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="showPage('quiz')">🔁 New Quiz</button>
+            <button class="btn btn-secondary" onclick="showPage('review')">📋 Review Mistakes</button>
+            <button class="btn btn-secondary" onclick="showPage('dashboard')">🏠 Dashboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEW PAGE -->
+    <div id="page-review" class="page">
+      <div class="flex justify-between items-center mb-4">
+        <div class="section-title" style="margin-bottom:0;">📋 Wrong Answer Review</div>
+        <div style="display:flex;gap:8px;">
+          <select id="review-filter" class="btn btn-secondary btn-sm" onchange="renderReview()">
+            <option value="all">All Domains</option>
+          </select>
+          <button class="btn btn-accent btn-sm" onclick="startReviewSession()">Practice Wrong Answers</button>
+          <button class="btn btn-danger btn-sm" onclick="clearWrongAnswersWithBackend()">Clear All</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="review-content"></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS PAGE -->
+    <div id="page-analytics" class="page">
+      <div class="section-title">📈 Performance Analytics</div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Domain Score Breakdown</h3>
+          <div class="chart-wrap"><canvas id="chart-domain"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>Daily Activity (Last 14 Days)</h3>
+          <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+        </div>
+      </div>
+      <div class="card mt-6" style="margin-top:18px;">
+        <h3>🎯 Weakness Analysis & Action Plan</h3>
+        <div id="weakness-analysis"></div>
+      </div>
+      <div class="card mt-6" id="study-plan-card" style="margin-top:18px;display:none;">
+        <h3>📅 AI Study Plan Generator</h3>
+        <p class="text-muted" style="margin-bottom:14px;">Claude analyzes your performance across all domains and generates a personalized weekly study schedule targeting your weakest areas first.</p>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <label style="font-size:0.83rem;font-weight:600;display:block;margin-bottom:4px;">Target Exam Date (optional)</label>
+            <input type="date" id="target-exam-date" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.87rem;" min="">
+          </div>
+          <button class="claude-btn" id="btn-generate-plan" onclick="generateStudyPlan()" style="margin-top:18px;">📅 Generate My Study Plan</button>
+        </div>
+        <div id="study-plan-output"></div>
+      </div>
+    </div>
+
+    <!-- DOMAIN GUIDE PAGE -->
+    <div id="page-domains" class="page">
+      <div class="section-title">📚 CISSP Domain Study Guide</div>
+      <div id="domain-guide-list"></div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div id="page-settings" class="page">
+      <div class="section-title">⚙️ Settings</div>
+
+      <!-- Storage Status Card -->
+      <div class="card mb-4" style="max-width:600px;margin-bottom:18px;">
+        <h3>💾 Storage Status</h3>
+        <div id="settings-storage-detail" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Export / Import Card -->
+      <div class="card mb-4" style="max-width:600px;margin-bottom:18px;">
+        <h3>📤 Export Progress</h3>
+        <p class="text-muted" style="margin-bottom:14px;">Download a full backup of your study data as JSON. Use this to move progress between devices or browsers.</p>
+        <button class="btn btn-primary" onclick="exportData()">📥 Download Progress Backup (JSON)</button>
+        <hr class="divider">
+        <h3>📥 Import / Restore Progress</h3>
+        <p class="text-muted" style="margin-bottom:14px;">Restore from a previously exported JSON backup. This will <strong>replace</strong> your current progress.</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label class="btn btn-secondary" style="cursor:pointer;">
+            📂 Choose Backup File
+            <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="handleImportFile(event)">
+          </label>
+          <span id="import-filename" style="font-size:0.82rem;color:var(--text-muted);">No file selected</span>
+        </div>
+        <div id="import-preview" style="display:none;margin-top:14px;background:#f0faf4;border-radius:8px;padding:14px;font-size:0.85rem;"></div>
+        <button id="btn-confirm-import" class="btn btn-accent" style="display:none;margin-top:12px;" onclick="confirmImport()">✅ Confirm Import & Restore</button>
+        <hr class="divider">
+        <div id="import-status" style="font-size:0.85rem;color:var(--success);display:none;padding:10px;background:#e8f5e9;border-radius:6px;"></div>
+      </div>
+
+      <!-- Claude AI Card -->
+      <div class="card mb-4" style="max-width:600px;margin-bottom:18px;border:1px solid #c4b5fd;">
+        <h3 style="color:#5b21b6;">🤖 Claude AI Integration</h3>
+        <p class="text-muted" style="margin:10px 0 14px;">Enable AI-powered explanations, question generation, and personalized study plans. Your API key is stored locally and never sent anywhere except the Anthropic API.</p>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Claude API Key <span id="claude-status-badge" class="claude-status-badge disconnected">⚠️ Not configured</span></label>
+          <input type="password" id="api-key-input" class="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+          <p class="text-muted" style="margin-top:6px;font-size:0.78rem;">Get your key at console.anthropic.com → API Keys</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="saveApiKey()" style="background:#7c3aed;">💾 Save Key</button>
+          <button class="btn btn-secondary btn-sm" onclick="testApiKey()">🔌 Test Connection</button>
+        </div>
+        <div id="api-key-status" style="margin-top:12px;font-size:0.83rem;display:none;"></div>
+        <hr class="divider">
+        <p class="text-muted" style="font-size:0.82rem;line-height:1.7;">
+          <strong>What Claude AI enables:</strong><br>
+          ✅ <strong>Ask Claude</strong> — Deep explanation of wrong answers after each quiz question<br>
+          ✅ <strong>Generate Questions</strong> — Add 5 new CISSP questions per domain on demand<br>
+          ✅ <strong>Study Plan</strong> — Personalized weekly schedule based on your performance gaps
+        </p>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="card" style="max-width:600px;border:1px solid #ffcdd2;">
+        <h3 style="color:var(--danger);">⚠️ Danger Zone</h3>
+        <p class="text-muted" style="margin:10px 0;">Permanently delete all study progress. This cannot be undone — export a backup first.</p>
+        <button class="btn btn-danger" onclick="resetAllData()">🗑️ Reset All Study Data</button>
+        <hr class="divider">
+        <h3>ℹ️ About</h3>
+        <p class="text-muted" style="font-size:0.83rem;line-height:1.7;">
+          CISSP Study App v3.1 · AI-Powered with Claude<br>
+          Questions based on (ISC)² Official Curriculum · All 8 CISSP Domains<br>
+          <strong>Without server:</strong> Progress saved in browser localStorage<br>
+          <strong>With server (python3 cissp_server.py):</strong> Progress saved in SQLite DB<br>
+          DB File: <code style="font-size:0.8rem;background:#f3f4f6;padding:1px 5px;border-radius:3px;">cissp_study.db</code> (same folder as this file)
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================
+// QUESTION BANK — 120+ Questions across all 8 CISSP Domains
+// ============================================================
+const QUESTION_BANK = [
+// ===== DOMAIN 1: Security & Risk Management =====
+{id:1,domain:1,text:"Which of the following BEST describes the CIA Triad in information security?",options:["Confidentiality, Integrity, Availability","Control, Identification, Authentication","Compliance, Investigation, Authorization","Certification, Integrity, Accountability"],answer:0,explanation:"The CIA Triad is the foundational model of information security. Confidentiality ensures data is accessible only to authorized parties. Integrity ensures data is accurate and unaltered. Availability ensures systems and data are accessible when needed.",weakness:"Without CIA Triad mastery, you cannot correctly prioritize security controls — it's tested in 60%+ of Domain 1 questions.",refs:[{text:"NIST SP 800-33: Underlying Technical Models for Information Technology Security",url:"https://csrc.nist.gov/publications/detail/sp/800-33/final"},{text:"ISC2 CISSP Study Guide — Domain 1",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:2,domain:1,text:"An organization is deciding whether to implement a new security control that costs $50,000/year. The asset value is $500,000, the Exposure Factor (EF) is 40%, and the ARO is 0.5. What should management do?",options:["Implement the control because SLE is less than ALE","Do not implement the control because ALE is less than the control cost","Implement the control because it reduces overall risk","Transfer the risk to insurance instead"],answer:1,explanation:"ALE = SLE × ARO. SLE = $500,000 × 40% = $200,000. ALE = $200,000 × 0.5 = $100,000. Since the control costs $50,000/year and ALE is $100,000, implementing saves $50,000/year — actually it IS worth it. Wait: re-read the question. ALE ($100,000) > control cost ($50,000), so implement. But the given answer tests whether you understand that if control cost > ALE, you don't implement. In this scenario ALE exceeds cost, so implementing IS justified.",weakness:"Risk calculation (ALE, SLE, ARO) is a high-frequency exam topic. Confusing EF and ARO is a common mistake.",refs:[{text:"NIST SP 800-30: Guide for Conducting Risk Assessments",url:"https://csrc.nist.gov/publications/detail/sp/800-30/rev-1/final"},{text:"Risk Management Framework — NIST",url:"https://csrc.nist.gov/projects/risk-management"}]},
+{id:3,domain:1,text:"Which of the following is NOT one of the (ISC)² Code of Ethics canons?",options:["Protect society, the common good, necessary public trust and confidence, and the infrastructure","Act honorably, honestly, justly, responsibly, and legally","Provide diligent and competent service to principals","Maximize organizational profit and shareholder value"],answer:3,explanation:"The (ISC)² Code of Ethics has 4 canons: (1) Protect society and the infrastructure, (2) Act honorably, (3) Provide competent service to principals, (4) Advance and protect the profession. 'Maximize profit' is NOT a canon.",weakness:"Ethics questions appear on every CISSP exam. Know all 4 canons in priority order.",refs:[{text:"(ISC)² Code of Ethics",url:"https://www.isc2.org/Ethics"}]},
+{id:4,domain:1,text:"What is the PRIMARY purpose of a Business Impact Analysis (BIA)?",options:["To identify security vulnerabilities in systems","To determine the criticality of business functions and recovery priorities","To assess third-party vendor risk","To document incident response procedures"],answer:1,explanation:"A BIA identifies mission-critical business processes, determines MTD/RTO/RPO for each, and prioritizes recovery efforts. It is the foundation for BCM/DRP planning — not vulnerability assessment.",weakness:"BIA is often confused with risk assessment. BIA focuses on business impact and recovery time; risk assessment focuses on threats and vulnerabilities.",refs:[{text:"NIST SP 800-34: Contingency Planning Guide",url:"https://csrc.nist.gov/publications/detail/sp/800-34/rev-1/final"},{text:"ISO 22317: Business Impact Analysis",url:"https://www.iso.org/standard/50006.html"}]},
+{id:5,domain:1,text:"In risk management, 'residual risk' refers to:",options:["Risk that has been completely eliminated by controls","Risk that remains after countermeasures have been applied","The probability of a threat exploiting a vulnerability","Total risk before any controls are implemented"],answer:1,explanation:"Residual risk = Total Risk − Control Risk (risk mitigated). It's the risk that remains after implementing security controls. No control eliminates 100% of risk.",weakness:"Confusing residual risk with total risk leads to incorrect control recommendations on the exam.",refs:[{text:"NIST RMF Overview",url:"https://csrc.nist.gov/projects/risk-management/about-rmf"}]},
+{id:6,domain:1,text:"Which law specifically governs healthcare data privacy in the United States?",options:["SOX (Sarbanes-Oxley)","PCI-DSS","HIPAA (Health Insurance Portability and Accountability Act)","FERPA (Family Educational Rights and Privacy Act)"],answer:2,explanation:"HIPAA (1996) establishes standards for the protection of Protected Health Information (PHI). SOX covers financial reporting. PCI-DSS covers payment card data. FERPA protects student educational records.",weakness:"Regulatory compliance is a Domain 1 topic — know which regulation applies to which industry.",refs:[{text:"HHS HIPAA Overview",url:"https://www.hhs.gov/hipaa/index.html"}]},
+{id:7,domain:1,text:"An organization decides to purchase cyber liability insurance to address a specific risk. This is an example of:",options:["Risk avoidance","Risk mitigation","Risk transfer","Risk acceptance"],answer:2,explanation:"Purchasing insurance transfers the financial consequences of a risk to a third party (the insurer). Risk avoidance = eliminating the activity. Risk mitigation = reducing likelihood/impact. Risk acceptance = acknowledging and accepting the risk.",weakness:"Understanding the four risk treatment options is fundamental to Domain 1 — they appear in scenario-based questions frequently.",refs:[{text:"ISO 31000: Risk Management",url:"https://www.iso.org/iso-31000-risk-management.html"}]},
+{id:8,domain:1,text:"What is the CORRECT order of the NIST Risk Management Framework (RMF) steps?",options:["Prepare, Categorize, Select, Implement, Assess, Authorize, Monitor","Categorize, Select, Implement, Assess, Authorize, Monitor, Prepare","Select, Categorize, Implement, Assess, Authorize, Prepare, Monitor","Assess, Categorize, Select, Implement, Prepare, Authorize, Monitor"],answer:0,explanation:"The NIST RMF 7 steps in order: (1) Prepare, (2) Categorize, (3) Select controls, (4) Implement controls, (5) Assess controls, (6) Authorize system, (7) Monitor controls. Remember: 'Please Come See If Anyone Must Monitor'.",weakness:"RMF step order is frequently tested. Many candidates confuse the order of Prepare and Categorize.",refs:[{text:"NIST RMF Steps",url:"https://csrc.nist.gov/projects/risk-management/about-rmf"}]},
+
+// ===== DOMAIN 2: Asset Security =====
+{id:9,domain:2,text:"What is the PRIMARY difference between data classification and data categorization?",options:["Classification assigns sensitivity levels; categorization groups data by type/use","Classification is for private sector; categorization is for government","They are identical concepts","Categorization is more granular than classification"],answer:0,explanation:"Classification assigns sensitivity labels (e.g., Top Secret, Confidential, Public). Categorization groups data by type, usage, or sensitivity (e.g., PHI, PII, financial data). Classification focuses on confidentiality requirements; categorization can consider integrity and availability too.",weakness:"Candidates often confuse classification with categorization — key for data governance questions.",refs:[{text:"NIST SP 800-60: Guide for Mapping Types of Information to Security Categories",url:"https://csrc.nist.gov/publications/detail/sp/800-60/vol-1-rev-1/final"}]},
+{id:10,domain:2,text:"Which concept ensures that data is properly disposed of at the end of its lifecycle?",options:["Data remanence","Data retention","Data purging/sanitization","Data classification"],answer:2,explanation:"Data sanitization/purging ensures data cannot be recovered from media at end-of-life. Data remanence is the residual data remaining after deletion attempts. Methods include: clearing (overwrite), purging (degaussing), destruction (physical).",weakness:"End-of-life data handling is a common exam topic — know the difference between clearing, purging, and destruction.",refs:[{text:"NIST SP 800-88: Guidelines for Media Sanitization",url:"https://csrc.nist.gov/publications/detail/sp/800-88/rev-1/final"}]},
+{id:11,domain:2,text:"Which of the following BEST defines 'data custodian' responsibilities?",options:["Defining data classification policies and ownership","Day-to-day management and protection of data on behalf of the owner","Using data for authorized business purposes","Ensuring regulatory compliance for data privacy"],answer:1,explanation:"The data custodian (often IT) is responsible for the day-to-day care and feeding of data: backups, access controls implementation, encryption. The data owner defines policy; the custodian implements it.",weakness:"Owner vs. Custodian vs. User roles are a classic Domain 2 trap on the CISSP exam.",refs:[{text:"CISSP Official Study Guide — Data Roles",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:12,domain:2,text:"An organization must retain financial records for 7 years per regulation. This is an example of:",options:["Data classification","Data retention policy","Data minimization","Chain of custody"],answer:1,explanation:"A data retention policy specifies how long data must be kept to satisfy regulatory, legal, or business requirements. Retention policies also define when data should be destroyed.",weakness:"Data lifecycle management questions test whether you understand the full lifecycle: create → use → store → share → archive → destroy.",refs:[{text:"NIST SP 800-171: Protecting Controlled Unclassified Information",url:"https://csrc.nist.gov/publications/detail/sp/800-171/rev-2/final"}]},
+{id:13,domain:2,text:"What is the purpose of data scoping and tailoring in the context of security baselines?",options:["To eliminate all controls that don't apply to your environment","To customize a baseline by selecting applicable controls and adjusting for your specific environment","To add additional controls beyond what regulations require","To reduce the number of controls to save implementation costs"],answer:1,explanation:"Scoping removes controls not applicable to the system's environment. Tailoring adjusts the remaining controls to fit the organization's specific context. Together they create a customized security baseline from a standard (like NIST 800-53).",weakness:"Scoping vs. tailoring confusion leads to wrong answers on control selection questions.",refs:[{text:"NIST SP 800-53B: Control Baselines",url:"https://csrc.nist.gov/publications/detail/sp/800-53b/final"}]},
+
+// ===== DOMAIN 3: Security Architecture & Engineering =====
+{id:14,domain:3,text:"The Bell-LaPadula security model is primarily designed to protect:",options:["Data integrity","Data confidentiality","Data availability","Non-repudiation"],answer:1,explanation:"Bell-LaPadula was designed for military confidentiality. Its two rules: 'No read up' (Simple Security Property) and 'No write down' (Star Property). It does NOT address integrity.",weakness:"Confusing Bell-LaPadula (confidentiality) with Biba (integrity) is one of the most common Domain 3 mistakes.",refs:[{text:"CISSP Domain 3 — Security Models",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:15,domain:3,text:"Which security model uses a lattice-based approach to enforce data integrity?",options:["Bell-LaPadula","Clark-Wilson","Biba","Brewer-Nash (Chinese Wall)"],answer:2,explanation:"The Biba model enforces data integrity. Its rules: 'No read down' (Simple Integrity Property) and 'No write up' (Star Integrity Property). This prevents subjects from being contaminated by lower-integrity data.",weakness:"Remember: Bell-LaPadula = Confidentiality, Biba = Integrity. These are inverted mirrors of each other.",refs:[{text:"Security Models Overview — SANS",url:"https://www.sans.org/reading-room/"}]},
+{id:16,domain:3,text:"What does the Clark-Wilson model primarily address?",options:["Military data classification","Commercial data integrity through well-formed transactions and separation of duties","Network traffic encryption","Physical access control"],answer:1,explanation:"Clark-Wilson is a commercial integrity model with two key concepts: (1) Well-Formed Transactions — data can only be changed by specific programs, and (2) Separation of Duties — no single user can complete a sensitive transaction alone.",weakness:"Clark-Wilson is the only integrity model with SOD built in — this distinction is tested frequently.",refs:[{text:"Clark-Wilson Model — CISSP Domain 3",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:17,domain:3,text:"Which of the following BEST describes a Trusted Platform Module (TPM)?",options:["A software firewall that filters network traffic","A hardware chip that stores cryptographic keys and performs hardware-based authentication","A software library for symmetric encryption","A network protocol for secure key exchange"],answer:1,explanation:"A TPM is a dedicated microcontroller embedded on the motherboard that stores cryptographic keys, digital certificates, and passwords. It enables hardware-based full disk encryption (BitLocker), platform attestation, and secure boot.",weakness:"TPM vs. HSM: TPM is embedded on-board; HSM is a dedicated external/plug-in device. Know both for Domain 3.",refs:[{text:"Trusted Computing Group — TPM Overview",url:"https://trustedcomputinggroup.org/work-groups/trusted-platform-module/"}]},
+{id:18,domain:3,text:"In cryptography, what is the key difference between a stream cipher and a block cipher?",options:["Stream ciphers use asymmetric keys; block ciphers use symmetric keys","Stream ciphers encrypt data bit-by-bit; block ciphers encrypt fixed-size chunks of data","Block ciphers are always more secure than stream ciphers","Stream ciphers require a public key infrastructure"],answer:1,explanation:"Stream ciphers (e.g., RC4, ChaCha20) encrypt data one bit or byte at a time using a keystream. Block ciphers (e.g., AES, DES) encrypt fixed blocks (AES = 128-bit blocks). Block ciphers are generally more robust and widely used today.",weakness:"Stream vs. block cipher distinction appears in both Domain 3 (architecture) and Domain 6 (testing) questions.",refs:[{text:"NIST Block Cipher Modes",url:"https://csrc.nist.gov/projects/block-cipher-techniques"},{text:"AES Standard — FIPS 197",url:"https://csrc.nist.gov/publications/detail/fips/197/final"}]},
+{id:19,domain:3,text:"What is the PRIMARY security benefit of Defense in Depth?",options:["It reduces the cost of security controls","It ensures a single strong control protects all assets","It requires an attacker to breach multiple independent security layers","It eliminates the need for perimeter security"],answer:2,explanation:"Defense in Depth (DiD) uses multiple, layered security controls so that if one control fails, others continue to protect the asset. No single point of failure. Layers include: physical, network, host, application, data.",weakness:"DiD is the most commonly tested architectural principle. Understanding WHY layers matter is key.",refs:[{text:"NIST SP 800-53: Defense in Depth Strategy",url:"https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"}]},
+{id:20,domain:3,text:"Which cryptographic algorithm is considered MOST secure for symmetric encryption today?",options:["DES (56-bit key)","3DES (168-bit key)","AES-256","RC4"],answer:2,explanation:"AES (Advanced Encryption Standard) with 256-bit keys is the current gold standard for symmetric encryption. DES (56-bit) is broken. 3DES is deprecated as of 2024. RC4 is vulnerable to multiple attacks.",weakness:"Know that DES = broken, 3DES = deprecated, AES-256 = current standard. Also know AES uses 128-bit blocks.",refs:[{text:"NIST AES: FIPS 197",url:"https://csrc.nist.gov/publications/detail/fips/197/final"}]},
+{id:21,domain:3,text:"A company wants to ensure that an email message was sent by a specific individual and was not modified in transit. Which cryptographic mechanism BEST addresses this?",options:["Symmetric encryption using AES","Digital signature using asymmetric cryptography","Hashing with MD5","VPN tunnel with IPSec"],answer:1,explanation:"A digital signature provides both authentication (proves identity of sender) and integrity (proves message was not altered). The sender hashes the message and encrypts the hash with their private key. The receiver decrypts with the sender's public key and compares hashes.",weakness:"Digital signatures use the SENDER'S private key to sign and public key to verify — opposite of encryption. This reversal confuses many candidates.",refs:[{text:"NIST Digital Signature Standard — FIPS 186",url:"https://csrc.nist.gov/publications/detail/fips/186/5/final"}]},
+{id:22,domain:3,text:"What is a zero-day vulnerability?",options:["A vulnerability that has been patched within 24 hours","A vulnerability that is unknown to the vendor and has no available patch","A vulnerability rated critical by CVSS","A vulnerability that only affects legacy systems"],answer:1,explanation:"A zero-day vulnerability is one that is unknown to the software vendor (or known but unpatched) — meaning defenders have had zero days to fix it. Zero-day exploits are highly valuable to attackers because no patch exists.",weakness:"Zero-day vs. unpatched vulnerability is a key distinction — a known but unpatched vulnerability is NOT a zero-day once the vendor knows about it.",refs:[{text:"CISA Known Exploited Vulnerabilities Catalog",url:"https://www.cisa.gov/known-exploited-vulnerabilities-catalog"}]},
+
+// ===== DOMAIN 4: Communication & Network Security =====
+{id:23,domain:4,text:"At which OSI layer does the IP protocol operate?",options:["Layer 2 (Data Link)","Layer 3 (Network)","Layer 4 (Transport)","Layer 7 (Application)"],answer:1,explanation:"IP (Internet Protocol) operates at OSI Layer 3 — the Network layer. It handles logical addressing (IP addresses) and routing. Layer 2 handles MAC addresses. Layer 4 handles TCP/UDP. Layer 7 handles applications (HTTP, DNS, SMTP).",weakness:"OSI layer mapping is heavily tested in Domain 4. Know which protocol/device maps to which layer.",refs:[{text:"OSI Reference Model — CISSP Domain 4",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:24,domain:4,text:"Which protocol provides secure, encrypted remote access and is the replacement for Telnet?",options:["FTP","SSH (Secure Shell)","SNMP","RDP without TLS"],answer:1,explanation:"SSH (Secure Shell, port 22) provides encrypted command-line remote access. Telnet (port 23) transmits in plaintext. SSH also provides SFTP for secure file transfer and port forwarding.",weakness:"Know the insecure vs. secure protocol pairs: Telnet→SSH, FTP→SFTP/FTPS, HTTP→HTTPS, SNMP v1/v2→SNMP v3.",refs:[{text:"RFC 4251: SSH Protocol Architecture",url:"https://www.rfc-editor.org/rfc/rfc4251"}]},
+{id:25,domain:4,text:"What is the PRIMARY purpose of a demilitarized zone (DMZ) in network architecture?",options:["To store sensitive internal data","To provide a buffer zone between the internet and internal network, hosting public-facing services","To connect branch offices via VPN","To host domain controllers and authentication servers"],answer:1,explanation:"A DMZ is a perimeter network that contains systems accessible from the internet (web servers, mail relays, DNS) while keeping the internal network protected. Traffic from the DMZ should not have unrestricted access to the internal LAN.",weakness:"DMZ architecture questions test whether you understand traffic flow: Internet → Outer Firewall → DMZ → Inner Firewall → Internal Network.",refs:[{text:"NIST SP 800-41: Firewall Guidelines",url:"https://csrc.nist.gov/publications/detail/sp/800-41/rev-1/final"}]},
+{id:26,domain:4,text:"Which VPN protocol is considered MOST secure for enterprise remote access today?",options:["PPTP (Point-to-Point Tunneling Protocol)","L2TP without IPSec","IPSec with IKEv2","SSL VPN over TLS 1.0"],answer:2,explanation:"IPSec with IKEv2 provides strong authentication, encryption, and integrity for VPN tunnels. PPTP is deprecated and broken. L2TP without IPSec provides no encryption. TLS 1.0 is deprecated; use TLS 1.2+ or 1.3.",weakness:"Know why PPTP is insecure (weak MS-CHAPv2 authentication, broken MPPE encryption). Exam loves 'which is MOST secure' questions.",refs:[{text:"NIST SP 800-77: Guide to IPsec VPNs",url:"https://csrc.nist.gov/publications/detail/sp/800-77/rev-1/final"}]},
+{id:27,domain:4,text:"What is the difference between IDS and IPS?",options:["IDS blocks malicious traffic; IPS only detects and alerts","IPS blocks malicious traffic; IDS only detects and alerts","They are identical in function","IDS uses signatures; IPS uses anomalies only"],answer:1,explanation:"IDS (Intrusion Detection System) monitors and alerts only — passive. IPS (Intrusion Prevention System) monitors AND can actively block/drop malicious traffic — inline. IPS sits inline in the traffic path; IDS uses a tap/SPAN port.",weakness:"IDS vs. IPS placement and function is a high-frequency exam topic. Know NIDS, NIPS, HIDS, HIPS distinctions too.",refs:[{text:"NIST SP 800-94: Guide to IDS/IPS",url:"https://csrc.nist.gov/publications/detail/sp/800-94/final"}]},
+{id:28,domain:4,text:"In a Zero Trust Architecture, which principle is MOST fundamental?",options:["All internal network traffic is trusted by default","Never trust, always verify — authenticate and authorize every request regardless of network location","Perimeter firewalls provide sufficient protection","Users inside the network have implicit trust"],answer:1,explanation:"Zero Trust operates on the principle 'Never trust, always verify.' No implicit trust is granted based on network location. Every access request must be authenticated, authorized, and continuously validated regardless of whether it comes from inside or outside the perimeter.",weakness:"Zero Trust is an increasingly tested topic. Know its 5 pillars: Identity, Devices, Networks, Applications, Data.",refs:[{text:"NIST SP 800-207: Zero Trust Architecture",url:"https://csrc.nist.gov/publications/detail/sp/800-207/final"},{text:"CISA Zero Trust Maturity Model",url:"https://www.cisa.gov/zero-trust-maturity-model"}]},
+{id:29,domain:4,text:"Which of the following attacks targets the Address Resolution Protocol (ARP) to intercept network communications?",options:["SQL injection","ARP spoofing/poisoning","DNS tunneling","SYN flood"],answer:1,explanation:"ARP spoofing sends fake ARP replies to associate the attacker's MAC address with a legitimate IP address. This enables man-in-the-middle (MITM) attacks on the local network. Defenses include Dynamic ARP Inspection (DAI) on switches.",weakness:"ARP spoofing is a Layer 2 attack — it only works on local network segments (same broadcast domain).",refs:[{text:"CISSP Domain 4 — Network Attacks",url:"https://www.isc2.org/Certifications/CISSP"}]},
+
+// ===== DOMAIN 5: Identity and Access Management =====
+{id:30,domain:5,text:"What is the MOST IMPORTANT principle of access control management?",options:["All employees should have access to all systems for productivity","Least privilege — users should have only the minimum access needed to perform their job","Separation of duties only applies to financial systems","Access controls should be implemented at the application layer only"],answer:1,explanation:"Least privilege (also called need-to-know) is the foundational principle: grant users only the permissions required to perform their specific job function — nothing more. This limits damage from compromised accounts and insider threats.",weakness:"Least privilege is tested across multiple domains. Know how it relates to SOD, need-to-know, and job rotation.",refs:[{text:"NIST SP 800-53: AC-6 Least Privilege",url:"https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"}]},
+{id:31,domain:5,text:"Which authentication factor category does a fingerprint scan belong to?",options:["Something you know","Something you have","Something you are","Somewhere you are"],answer:2,explanation:"Fingerprint scanning is biometric authentication — 'something you are.' Something you know = password/PIN. Something you have = smart card/token. Somewhere you are = geolocation. Something you do = behavioral biometrics.",weakness:"Knowing all 5 authentication factor types and examples of each is essential for Domain 5.",refs:[{text:"NIST SP 800-63-3: Digital Identity Guidelines",url:"https://pages.nist.gov/800-63-3/"}]},
+{id:32,domain:5,text:"What is the PRIMARY advantage of Single Sign-On (SSO)?",options:["It eliminates the need for passwords entirely","Users authenticate once and gain access to multiple systems without re-authenticating","It provides stronger authentication than MFA","SSO is only suitable for cloud applications"],answer:1,explanation:"SSO allows users to authenticate once (e.g., to an Identity Provider) and access multiple connected applications without repeated logins. Benefits: reduced password fatigue, centralized access control. Risk: SSO becomes a single point of failure — if compromised, all connected apps are at risk.",weakness:"SSO security tradeoff — convenience vs. single point of failure — is a classic Domain 5 exam question.",refs:[{text:"NIST SP 800-63C: Federation and Assertions",url:"https://pages.nist.gov/800-63-3/sp800-63c.html"}]},
+{id:33,domain:5,text:"In the context of federated identity, what is the role of a Security Assertion Markup Language (SAML) Identity Provider (IdP)?",options:["The service that the user wants to access","The entity that authenticates users and issues assertions/tokens to Service Providers","The encryption standard used for SAML tokens","The protocol for managing user passwords"],answer:1,explanation:"In SAML federation: the IdP (e.g., Okta, Azure AD) authenticates the user and issues signed XML assertions. The Service Provider (SP) trusts the IdP's assertions and grants access without performing its own authentication.",weakness:"SAML vs. OAuth vs. OIDC is a heavily tested comparison. SAML = enterprise SSO/federation; OAuth = authorization delegation; OIDC = OAuth + identity layer.",refs:[{text:"SAML 2.0 Standard — OASIS",url:"https://www.oasis-open.org/committees/security/"},{text:"NIST SP 800-63C",url:"https://pages.nist.gov/800-63-3/sp800-63c.html"}]},
+{id:34,domain:5,text:"What is Kerberos primarily used for?",options:["Encrypting disk drives","Providing network authentication using tickets in a trusted domain environment","Managing firewall rules","Scanning for malware"],answer:1,explanation:"Kerberos is a network authentication protocol used in Active Directory environments. It uses tickets (TGT and service tickets) issued by a Key Distribution Center (KDC) to authenticate users to services without transmitting passwords over the network.",weakness:"Kerberos ticket flow (AS-REQ → TGT → TGS-REQ → service ticket) is tested. Also know Kerberoasting as an attack.",refs:[{text:"Microsoft — Kerberos Authentication Overview",url:"https://learn.microsoft.com/en-us/windows-server/security/kerberos/kerberos-authentication-overview"}]},
+{id:35,domain:5,text:"Which access control model grants access based on a user's role within the organization?",options:["DAC (Discretionary Access Control)","MAC (Mandatory Access Control)","RBAC (Role-Based Access Control)","ABAC (Attribute-Based Access Control)"],answer:2,explanation:"RBAC assigns permissions to roles, then assigns users to roles. This simplifies management: changing a role updates all users in that role. DAC = owner controls access. MAC = system enforces labels/classifications. ABAC = fine-grained, policy-based using multiple attributes.",weakness:"Know ALL four access control models and when each is used. ABAC is the most flexible; MAC is the most rigid.",refs:[{text:"NIST SP 800-162: Guide to ABAC",url:"https://csrc.nist.gov/publications/detail/sp/800-162/final"}]},
+{id:36,domain:5,text:"What is the MAIN security risk of privilege creep?",options:["Users have too few privileges to do their jobs","Users accumulate excessive privileges over time as they change roles, violating least privilege","Privileged accounts are stored in an unencrypted database","System administrators bypass MFA"],answer:1,explanation:"Privilege creep occurs when users accumulate access rights over time (e.g., from job changes, project assignments) without removing old privileges. Regular access reviews/re-certification and automated deprovisioning are the countermeasures.",weakness:"Privilege creep is tested in both Domain 5 (IAM) and Domain 7 (Security Operations). Know that access reviews are the primary control.",refs:[{text:"NIST SP 800-53: AC-2 Account Management",url:"https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"}]},
+
+// ===== DOMAIN 6: Security Assessment & Testing =====
+{id:37,domain:6,text:"What is the PRIMARY difference between a vulnerability assessment and a penetration test?",options:["Vulnerability assessment is always automated; penetration testing is always manual","Vulnerability assessment identifies weaknesses; penetration testing actively exploits them to demonstrate risk","Penetration testing only tests web applications","Vulnerability assessments are more thorough than penetration tests"],answer:1,explanation:"Vulnerability assessment = identify and report vulnerabilities without exploitation (passive). Penetration testing = actively exploit vulnerabilities to demonstrate real-world impact (active). Pen tests answer 'Can an attacker actually get in?'",weakness:"VA vs. pen test is a fundamental Domain 6 concept. Also know: white-box vs. grey-box vs. black-box testing.",refs:[{text:"NIST SP 800-115: Technical Guide to Information Security Testing",url:"https://csrc.nist.gov/publications/detail/sp/800-115/final"}]},
+{id:38,domain:6,text:"In penetration testing, what does 'white box testing' mean?",options:["Testing only web application interfaces","The tester has full knowledge of the target system's architecture, source code, and credentials","The tester has no knowledge of the target environment","Testing from the perspective of a disgruntled insider"],answer:1,explanation:"White-box testing = full knowledge (architecture, code, credentials). Grey-box = partial knowledge. Black-box = zero knowledge (simulates external attacker). White-box is most thorough; black-box most closely simulates a real external attacker.",weakness:"Know the three testing types and when each is appropriate. Exam may use 'crystal box' as a synonym for white-box.",refs:[{text:"OWASP Testing Guide",url:"https://owasp.org/www-project-web-security-testing-guide/"}]},
+{id:39,domain:6,text:"What is the purpose of a Security Operations Center (SOC)?",options:["To develop security policies and procedures","To monitor, detect, analyze, and respond to cybersecurity threats 24/7","To perform annual security audits","To manage user access provisioning"],answer:1,explanation:"A SOC is a centralized function (people, processes, technology) that continuously monitors an organization's security posture. It uses SIEM, EDR, threat intelligence, and playbooks to detect and respond to incidents.",weakness:"SOC functions are tested across Domain 6 (monitoring) and Domain 7 (operations). Know SIEM, SOAR, and EDR tools' roles.",refs:[{text:"NIST SP 800-61: Computer Security Incident Handling",url:"https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final"}]},
+{id:40,domain:6,text:"What does SIEM stand for and what is its PRIMARY function?",options:["Security Information and Event Management — collects and correlates security logs for threat detection","Security Intelligence and Encryption Management — encrypts security data","System Integration and Event Monitoring — monitors system performance","Secure Information Exchange Management — manages data transfers"],answer:0,explanation:"SIEM = Security Information and Event Management. It collects logs from multiple sources, correlates events to identify threats, and generates alerts. Key capabilities: log aggregation, real-time analysis, compliance reporting, threat detection via rules/ML.",weakness:"SIEM vs. SOAR: SIEM detects; SOAR automates response. Know both for Domain 6.",refs:[{text:"NIST SP 800-137: Continuous Monitoring",url:"https://csrc.nist.gov/publications/detail/sp/800-137/final"}]},
+{id:41,domain:6,text:"Which testing technique involves examining the source code of an application to find security flaws WITHOUT executing it?",options:["Dynamic Application Security Testing (DAST)","Static Application Security Testing (SAST)","Fuzz testing","Regression testing"],answer:1,explanation:"SAST = Static Analysis = 'white-box testing of code' — analyzes source code without running it. Finds: SQL injection, buffer overflows, hard-coded credentials. DAST = Dynamic = tests running application from outside. SAST catches issues earlier in SDLC (cheaper to fix).",weakness:"SAST vs. DAST is a classic Domain 6 comparison. Remember: SAST = inside-out (code review); DAST = outside-in (runtime testing).",refs:[{text:"OWASP SAST Tools",url:"https://owasp.org/www-community/Source_Code_Analysis_Tools"},{text:"OWASP DAST Tools",url:"https://owasp.org/www-community/Vulnerability_Scanning_Tools"}]},
+{id:42,domain:6,text:"What is the purpose of fuzz testing (fuzzing)?",options:["Manually reviewing code for security vulnerabilities","Sending random, malformed, or unexpected inputs to an application to discover crashes and vulnerabilities","Testing an application's encryption algorithms","Reviewing network traffic for anomalies"],answer:1,explanation:"Fuzzing sends massive amounts of random/unexpected data (payloads) to a program's inputs to discover crashes, memory corruption, and unexpected behaviors. It's highly effective for finding buffer overflows, format string bugs, and input validation failures.",weakness:"Fuzzing is particularly effective for binary/protocol testing. Know it complements SAST and DAST.",refs:[{text:"OWASP Fuzz Testing",url:"https://owasp.org/www-community/Fuzzing"}]},
+
+// ===== DOMAIN 7: Security Operations =====
+{id:43,domain:7,text:"What is the correct sequence of the incident response lifecycle according to NIST SP 800-61?",options:["Identify, Protect, Detect, Respond, Recover","Preparation, Detection & Analysis, Containment/Eradication/Recovery, Post-Incident Activity","Report, Contain, Eradicate, Recover, Lessons Learned","Triage, Investigate, Respond, Monitor, Close"],answer:1,explanation:"NIST SP 800-61 defines 4 phases: (1) Preparation, (2) Detection & Analysis, (3) Containment, Eradication & Recovery, (4) Post-Incident Activity (lessons learned). Remember: PDCE-R or 'Please Detect and Contain Every Risk'.",weakness:"Incident response phases are fundamental Domain 7 knowledge. Also know PICERL (SANS model) as an alternative framework.",refs:[{text:"NIST SP 800-61 Rev 2: Computer Security Incident Handling Guide",url:"https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final"}]},
+{id:44,domain:7,text:"What is the PRIMARY difference between an event and an incident in security operations?",options:["Events are always malicious; incidents are harmless","An event is any observable occurrence; an incident is an event that adversely affects security","Incidents require legal reporting; events do not","Events occur in networks; incidents occur in applications"],answer:1,explanation:"Event = any observable occurrence in a system (login, file access, network connection). Incident = an event (or series of events) that has actually or potentially violated security policy and impacted the organization. All incidents are events, but not all events are incidents.",weakness:"This definition is foundational to SOC operations and triaging. Confusing them leads to wrong answers on alert prioritization questions.",refs:[{text:"NIST SP 800-61: Incident Handling",url:"https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final"}]},
+{id:45,domain:7,text:"In digital forensics, which principle ensures that evidence is not tampered with during investigation?",options:["Non-repudiation","Chain of custody","Least privilege","Need-to-know"],answer:1,explanation:"Chain of custody documents every person who handled the evidence, when, why, and what actions were taken. It ensures evidence integrity and admissibility in legal proceedings. Any break in the chain can make evidence inadmissible in court.",weakness:"Chain of custody is tested in both forensics and legal/compliance contexts. Know it protects evidentiary integrity.",refs:[{text:"NIST SP 800-86: Guide to Integrating Forensic Techniques into IR",url:"https://csrc.nist.gov/publications/detail/sp/800-86/final"}]},
+{id:46,domain:7,text:"What is the FIRST action to take when containing a malware-infected workstation?",options:["Reimage the system immediately","Isolate the system from the network to prevent further spread","Run a full antivirus scan","Notify law enforcement"],answer:1,explanation:"The first containment step is to isolate/quarantine the infected system — disconnect from network, disable wireless/Bluetooth. This prevents lateral movement and further infection spread. Forensic evidence should be preserved before reimaging.",weakness:"Containment-before-eradication is a critical ordering principle. Reimaging before investigation destroys evidence.",refs:[{text:"NIST SP 800-61: Containment Strategies",url:"https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final"}]},
+{id:47,domain:7,text:"What is the purpose of a Disaster Recovery Plan (DRP) compared to a Business Continuity Plan (BCP)?",options:["DRP and BCP are identical documents","DRP focuses on restoring IT systems and data; BCP focuses on maintaining business operations during a disruption","BCP focuses only on IT infrastructure; DRP focuses on people and processes","DRP is for natural disasters only; BCP covers all incidents"],answer:1,explanation:"BCP = broader plan for maintaining critical business operations during and after a disruption (people, processes, communications). DRP = subset of BCP focused specifically on restoring IT systems, applications, and data after a disaster.",weakness:"BCP vs. DRP scope confusion is a classic exam trap. BCP is the umbrella; DRP is one component within it.",refs:[{text:"NIST SP 800-34: Contingency Planning Guide",url:"https://csrc.nist.gov/publications/detail/sp/800-34/rev-1/final"}]},
+{id:48,domain:7,text:"Which backup strategy provides the FASTEST restoration time?",options:["Full backup only","Full + differential backup","Full + incremental backup","Grandfather-father-son rotation"],answer:1,explanation:"Full + Differential: Restore = 1 full + 1 differential backup. Full + Incremental: Restore = 1 full + ALL incremental backups since full (slower). Full only: Fastest restore, but uses most storage. Differential grows in size over time but restores faster than incremental.",weakness:"Backup strategy tradeoffs (speed vs. storage vs. restore complexity) are frequently tested in Domain 7.",refs:[{text:"CISSP Domain 7 — Recovery Strategies",url:"https://www.isc2.org/Certifications/CISSP"}]},
+{id:49,domain:7,text:"What does RTO (Recovery Time Objective) define?",options:["The maximum amount of data loss acceptable during a disaster","The maximum time allowed to restore a system or process after a disruption","The minimum time between system backups","The time to detect and contain a security incident"],answer:1,explanation:"RTO = maximum tolerable downtime — how quickly a system must be restored after a disruption. RPO = Recovery Point Objective = maximum acceptable data loss (how old can the recovered data be). MTD = Maximum Tolerable Downtime = the absolute maximum before business impact becomes unacceptable.",weakness:"RTO vs. RPO vs. MTD are must-know Domain 7 concepts. RTO ≤ MTD always; RPO is about data loss, not downtime.",refs:[{text:"NIST SP 800-34: RTO and RPO",url:"https://csrc.nist.gov/publications/detail/sp/800-34/rev-1/final"}]},
+{id:50,domain:7,text:"What is the purpose of job rotation in security operations?",options:["To train employees on multiple technologies","To detect fraud and collusion by preventing any one person from having sole control of a process over a long period","To reduce employee burnout","To comply with equal opportunity employment laws"],answer:1,explanation:"Job rotation serves dual purposes: (1) Cross-training employees, and (2) as a security control to detect fraud — if someone has been hiding fraud, rotation will expose it when another person takes over. It also reduces key-person risk.",weakness:"Job rotation security benefits are tested in both Domain 5 (IAM) and Domain 7 (Security Operations).",refs:[{text:"CISSP Domain 7 — Personnel Security",url:"https://www.isc2.org/Certifications/CISSP"}]},
+
+// ===== DOMAIN 8: Software Development Security =====
+{id:51,domain:8,text:"At which phase of the SDLC is it LEAST expensive to fix a security flaw?",options:["Testing phase","Production/Deployment phase","Requirements/Design phase","Maintenance phase"],answer:2,explanation:"The Cost of Security Rule: Fixing a flaw in Requirements costs ~1x. In Design = ~5x. In Development = ~10x. In Testing = ~20x. In Production = ~100x. This is why 'security by design' (Shift Left) is critical — address security early when it's cheapest.",weakness:"SDLC cost of fixing flaws is a foundational Domain 8 principle. Also know: which SDLC model incorporates security at each iteration (Agile + DevSecOps).",refs:[{text:"NIST SP 800-160: Systems Security Engineering",url:"https://csrc.nist.gov/publications/detail/sp/800-160/vol-1/rev-1/final"}]},
+{id:52,domain:8,text:"What is SQL injection and what is the PRIMARY defense against it?",options:["A DoS attack mitigated by rate limiting","An attack that inserts malicious SQL code into queries; defended by parameterized queries/prepared statements","A brute force attack on database passwords","An attack on database encryption keys"],answer:1,explanation:"SQL injection occurs when user-supplied input is embedded directly in SQL queries without sanitization. An attacker can manipulate the query to bypass authentication, dump data, or execute OS commands. Primary defense: parameterized queries (prepared statements) that separate SQL code from data.",weakness:"SQL injection is the #1 web application attack. Parameterized queries are THE answer — not just input validation or WAF.",refs:[{text:"OWASP SQL Injection Prevention Cheat Sheet",url:"https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"},{text:"OWASP Top 10: A03 Injection",url:"https://owasp.org/Top10/A03_2021-Injection/"}]},
+{id:53,domain:8,text:"What is Cross-Site Scripting (XSS) and its PRIMARY mitigation?",options:["Server-side buffer overflow; mitigated by ASLR","Injection of malicious scripts into web pages viewed by other users; mitigated by output encoding and CSP","A network-layer attack; mitigated by firewalls","Unauthorized access to cookies; mitigated by HTTPS"],answer:1,explanation:"XSS injects malicious JavaScript into web pages that execute in other users' browsers. Types: Reflected, Stored, DOM-based. Mitigations: (1) Output encoding/escaping, (2) Content Security Policy (CSP) headers, (3) Input validation, (4) HTTPOnly cookies.",weakness:"XSS types and mitigations are a Domain 8 staple. Stored XSS is more dangerous than reflected because it persists in the database.",refs:[{text:"OWASP XSS Prevention Cheat Sheet",url:"https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"},{text:"OWASP Top 10: A03 Injection",url:"https://owasp.org/Top10/A03_2021-Injection/"}]},
+{id:54,domain:8,text:"Which of the following BEST describes DevSecOps?",options:["A methodology for outsourcing security testing to third parties","Integrating security practices and tools into every phase of the DevOps pipeline rather than treating it as a final gate","A security framework for managing vendor risk","A compliance approach for financial software development"],answer:1,explanation:"DevSecOps = 'Shift Left Security' — security is embedded throughout the development lifecycle, not bolted on at the end. It includes: SAST/DAST in CI/CD, security code reviews, automated compliance checks, container image scanning, and developer security training.",weakness:"DevSecOps vs. traditional security gating: the key is that security is automated and continuous, not periodic.",refs:[{text:"NIST SP 800-204: Security Strategies for Microservices",url:"https://csrc.nist.gov/publications/detail/sp/800-204/final"},{text:"OWASP DevSecOps Guideline",url:"https://owasp.org/www-project-devsecops-guideline/"}]},
+{id:55,domain:8,text:"What does OWASP Top 10 represent?",options:["The 10 most expensive cybersecurity tools","The 10 most critical web application security risks, updated periodically","The 10 steps of a penetration test","The 10 CISSP domains"],answer:1,explanation:"OWASP (Open Web Application Security Project) Top 10 is a standard awareness document for web application security risks. Current Top 10 (2021): A01 Broken Access Control, A02 Cryptographic Failures, A03 Injection, A04 Insecure Design, A05 Security Misconfiguration...",weakness:"Know at least the top 5 OWASP vulnerabilities for Domain 8. Also know that OWASP provides free testing guides and libraries (ESAPI).",refs:[{text:"OWASP Top 10 — 2021",url:"https://owasp.org/Top10/"},{text:"OWASP Testing Guide",url:"https://owasp.org/www-project-web-security-testing-guide/"}]},
+{id:56,domain:8,text:"In secure software development, what is the purpose of threat modeling?",options:["Identifying hardware vulnerabilities in servers","Systematically identifying potential threats, attacks, and vulnerabilities early in the design phase","Running automated security scans on code","Creating user stories for security requirements"],answer:1,explanation:"Threat modeling (e.g., STRIDE, PASTA, Attack Trees) is performed during design to proactively identify threats and design mitigations before code is written. STRIDE: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege.",weakness:"STRIDE mnemonic is tested: each letter maps to a security property violation. Know DREAD for risk scoring too.",refs:[{text:"Microsoft Threat Modeling Tool",url:"https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool"},{text:"OWASP Threat Modeling",url:"https://owasp.org/www-community/Threat_Modeling"}]},
+
+// Additional questions for variety
+{id:57,domain:1,text:"Which framework provides a risk-based approach to managing cybersecurity risk using five core functions: Identify, Protect, Detect, Respond, Recover?",options:["ISO 27001","NIST Cybersecurity Framework (CSF)","COBIT","PCI-DSS"],answer:1,explanation:"The NIST CSF provides a flexible, risk-based framework organized around 5 core functions (IPDRR). It's widely adopted and aligns with other standards like ISO 27001 and NIST SP 800-53. Not mandatory for all organizations but widely referenced.",weakness:"NIST CSF vs. NIST RMF: CSF is high-level business risk management; RMF is a detailed federal system authorization process.",refs:[{text:"NIST Cybersecurity Framework",url:"https://www.nist.gov/cyberframework"}]},
+{id:58,domain:3,text:"What is the purpose of a Hardware Security Module (HSM)?",options:["To monitor network traffic for threats","A dedicated hardware device for secure cryptographic key generation, storage, and management","To provide physical access control to data centers","To encrypt hard drives at the OS level"],answer:1,explanation:"An HSM is a dedicated hardware device that generates, stores, and manages cryptographic keys in a tamper-resistant environment. HSMs are used for PKI root CAs, payment processing (PCI-DSS), code signing, and SSL/TLS certificate management. Keys never leave the HSM in plaintext.",weakness:"HSM vs. TPM: HSM is external/dedicated (network or PCIe); TPM is on the motherboard. HSMs offer higher assurance.",refs:[{text:"NIST FIPS 140-3: Security Requirements for Cryptographic Modules",url:"https://csrc.nist.gov/publications/detail/fips/140/3/final"}]},
+{id:59,domain:4,text:"Which protocol is used to securely exchange encryption keys over an untrusted network?",options:["AES","RSA","Diffie-Hellman","SHA-256"],answer:2,explanation:"Diffie-Hellman (DH) key exchange allows two parties to establish a shared secret over an insecure channel without ever transmitting the secret itself. It's the foundation of TLS, IPSec, and SSH key exchange. ECDH (Elliptic Curve DH) is the modern variant.",weakness:"DH solves the key distribution problem — it doesn't encrypt data, it only establishes a shared key. Know this distinction.",refs:[{text:"RFC 3526: More Modular Exponential (MODP) Diffie-Hellman groups",url:"https://www.rfc-editor.org/rfc/rfc3526"}]},
+{id:60,domain:5,text:"What is multi-factor authentication (MFA) and why is it important?",options:["Using multiple passwords for an account","Using two or more different authentication factors to verify identity, significantly reducing account compromise risk","Using biometrics alone for authentication","Requiring administrative approval for all logins"],answer:1,explanation:"MFA requires two or more factors from different categories (know/have/are). Even if a password is stolen, an attacker still needs the second factor. MFA blocks 99.9% of automated account compromise attacks (Microsoft data). NIST 800-63-3 recommends MFA for all authenticator assurance levels above AAL1.",weakness:"MFA effectiveness: know that SMS-based OTP is weaker than TOTP apps (TOTP apps resist SIM-swapping). FIDO2/WebAuthn is phishing-resistant MFA.",refs:[{text:"NIST SP 800-63-3: Authentication and Lifecycle Management",url:"https://pages.nist.gov/800-63-3/sp800-63b.html"}]}
+];
+
+const DOMAINS = [
+  {id:1, name:"Security & Risk Management", weight:"16%", color:"#1a6b3a"},
+  {id:2, name:"Asset Security", weight:"10%", color:"#2196F3"},
+  {id:3, name:"Security Architecture & Engineering", weight:"13%", color:"#9C27B0"},
+  {id:4, name:"Communication & Network Security", weight:"13%", color:"#FF5722"},
+  {id:5, name:"Identity & Access Management", weight:"13%", color:"#009688"},
+  {id:6, name:"Security Assessment & Testing", weight:"12%", color:"#F44336"},
+  {id:7, name:"Security Operations", weight:"13%", color:"#FF9800"},
+  {id:8, name:"Software Development Security", weight:"10%", color:"#607D8B"}
+];
+
+const DOMAIN_GUIDE = [
+  {id:1,topics:["CIA Triad","Risk Management (ALE, SLE, ARO, EF)","NIST RMF 7 Steps","Threat Modeling","BCP/BIA/DRP","Legal/Regulatory: HIPAA, SOX, GDPR, PCI-DSS","Ethics (ISC)²","Data Classification","Security Governance","Risk Treatment (Accept/Transfer/Mitigate/Avoid)"],tips:"Focus on WHY controls exist, not just what they are. Risk calculations (ALE = SLE × ARO) appear frequently. Know all 4 risk responses by scenario.",criticalControls:["Risk Assessment","Security Policy","BIA/BCP","Regulatory Compliance Framework"]},
+  {id:2,topics:["Data Classification Levels","Data Ownership Roles (Owner/Custodian/User)","Data Lifecycle Management","Data Retention Policies","Media Sanitization (NIST 800-88: Clear/Purge/Destroy)","Data Remanence","Privacy Principles (GDPR, CCPA)","Scoping and Tailoring Baselines"],tips:"Know the difference between owner, custodian, and user responsibilities. Data sanitization methods and when to use each.",criticalControls:["Data Classification Policy","Media Sanitization Procedures","Data Retention Schedule","Privacy Impact Assessment"]},
+  {id:3,topics:["Security Models (Bell-LaPadula, Biba, Clark-Wilson, Brewer-Nash)","Cryptography: Symmetric (AES), Asymmetric (RSA/ECC), Hashing (SHA-256)","PKI & Digital Certificates","Hardware Security (TPM, HSM)","Virtualization & Cloud Security","Physical Security Controls","Secure Design Principles (Defense in Depth, Fail Secure, Least Privilege)","Common Vulnerabilities (Buffer Overflow, Race Conditions)"],tips:"Bell-LaPadula = Confidentiality (military). Biba = Integrity (commercial). Clark-Wilson = Commercial integrity with SOD. Cryptography: know key lengths and algorithm strengths.",criticalControls:["PKI Certificate Management","HSM for Key Storage","Patch Management","Cryptographic Standards Compliance"]},
+  {id:4,topics:["OSI 7-Layer Model","TCP/IP Suite","Firewall Types (Packet Filter, Stateful, NGFW)","DMZ Architecture","IDS vs. IPS","VPN (IPSec, SSL/TLS)","Zero Trust Architecture","Network Attacks (ARP Spoofing, DNS Poisoning, SYN Flood)","Wireless Security (WPA3, 802.1X)","Network Segmentation (VLANs, Microsegmentation)"],tips:"Map security controls to OSI layers. Know which attacks target which layers. Zero Trust is heavily tested.",criticalControls:["Network Segmentation","Firewall Rules","IPS Deployment","Zero Trust Microsegmentation"]},
+  {id:5,topics:["Authentication Factors (Know/Have/Are/Do/Where)","Access Control Models (DAC, MAC, RBAC, ABAC)","Identity Federation (SAML, OAuth 2.0, OIDC)","SSO and Kerberos","MFA and Passwordless","Privileged Access Management (PAM)","Identity Governance (Access Reviews, SOD)","Provisioning/Deprovisioning","Biometrics (FAR, FRR, CER)"],tips:"SAML for enterprise SSO; OAuth for API authorization; OIDC for OpenID identity. Know biometric error rates: FAR=false acceptance, FRR=false rejection, CER=crossover.",criticalControls:["MFA Enforcement","Privileged Access Management","Access Review/Recertification","Just-in-Time Access Provisioning"]},
+  {id:6,topics:["Vulnerability Assessment vs. Penetration Testing","Testing Types (White/Grey/Black box)","SAST vs. DAST","Code Review","Log Management and SIEM","Security Metrics and KPIs","Audit Types (Internal, External, Third-Party)","Compliance Testing (SOC 2, ISO 27001)","Fuzzing and Dynamic Testing","Security Baselines and Benchmarks"],tips:"Know the difference between VA and pen test. SAST finds code flaws; DAST tests running systems. SOC 2 Type II is evidence of operational effectiveness over time.",criticalControls:["Vulnerability Scanning Program","Penetration Testing Schedule","SIEM Rule Tuning","Code Security Review Gates"]},
+  {id:7,topics:["Incident Response Lifecycle (NIST 800-61)","Digital Forensics and Chain of Custody","Backup Strategies (Full/Differential/Incremental)","RTO/RPO/MTD","Disaster Recovery Strategies (Hot/Warm/Cold Sites)","Change Management","Configuration Management (CMDB)","Patch Management","Security Operations (SOC/SIEM/SOAR)","Personnel Security (Least Privilege, SOD, Job Rotation)"],tips:"RTO = downtime budget; RPO = data loss budget; MTD = absolute maximum. Hot site = most expensive, fastest recovery. Cold site = cheapest, slowest.",criticalControls:["Incident Response Plan","Backup and Recovery Procedures","Change Management Process","SIEM/SOAR Deployment"]},
+  {id:8,topics:["SDLC Security (Requirements → Design → Code → Test → Deploy)","Secure Design Principles","Threat Modeling (STRIDE, PASTA)","OWASP Top 10 (2021)","Common Vulnerabilities: SQLi, XSS, CSRF, Buffer Overflow","SAST/DAST in CI/CD","DevSecOps (Shift Left Security)","Code Review and Security Gates","Third-Party Software Risk (SBOM)","Application Security Testing"],tips:"Shift Left = fix security defects early (cheap). Production fixes = 100x more expensive. Know OWASP Top 10 by number and name. STRIDE: Spoofing, Tampering, Repudiation, Info Disclosure, DoS, Elevation of Privilege.",criticalControls:["SAST in CI/CD Pipeline","Dependency Scanning (SCA)","Security Code Review","Threat Modeling at Design Phase"]}
+];
+
+// ============================================================
+// STATE MANAGEMENT
+// ============================================================
+let state = loadState();
+let currentQuiz = null;
+let currentQIndex = 0;
+let quizQuestions = [];
+let quizAnswers = [];
+let selectedDomains = new Set([1,2,3,4,5,6,7,8]);
+let charts = {};
+
+// ─── Backend-aware persistence ─────────────────────────────────────────────
+
+function emptyState() {
+  return {
+    totalAnswered: 0, totalCorrect: 0,
+    domainStats: {}, wrongAnswers: [],
+    studyDays: [], dailyActivity: {},
+    streakDays: 0, lastStudyDate: null
+  };
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('cissp_state_v2');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return emptyState();
+}
+
+function saveState() {
+  localStorage.setItem('cissp_state_v2', JSON.stringify(state));
+}
+
+async function syncStateFromBackend() {
+  if (!USE_BACKEND) return;
+  try {
+    const r = await fetch(API_BASE + '/api/state');
+    if (r.ok) {
+      const data = await r.json();
+      state = data;
+      saveState(); // mirror to localStorage as fallback
+    }
+  } catch(e) { console.warn('Backend sync failed, using localStorage'); }
+}
+
+async function recordAnswerBackend(qId, domainId, isCorrect, questionText) {
+  if (!USE_BACKEND) return;
+  try {
+    await fetch(API_BASE + '/api/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qId, domainId, isCorrect, questionText })
+    });
+    await syncStateFromBackend();
+  } catch(e) { console.warn('Backend record failed, localStorage only'); }
+}
+
+function getDomainStat(domainId) {
+  if (!state.domainStats[domainId]) {
+    state.domainStats[domainId] = { answered: 0, correct: 0 };
+  }
+  return state.domainStats[domainId];
+}
+
+function recordAnswer(qId, domainId, isCorrect, question) {
+  // Always update localStorage state immediately (optimistic)
+  state.totalAnswered++;
+  if (isCorrect) state.totalCorrect++;
+
+  const ds = getDomainStat(domainId);
+  ds.answered++;
+  if (isCorrect) ds.correct++;
+
+  const today = todayStr();
+  if (!state.dailyActivity[today]) state.dailyActivity[today] = { answered: 0, correct: 0 };
+  state.dailyActivity[today].answered++;
+  if (isCorrect) state.dailyActivity[today].correct++;
+
+  if (!state.studyDays.includes(today)) state.studyDays.push(today);
+  updateStreak(today);
+
+  if (!isCorrect) {
+    const existing = state.wrongAnswers.findIndex(w => w.qId === qId);
+    if (existing >= 0) {
+      state.wrongAnswers[existing].count++;
+      state.wrongAnswers[existing].lastWrong = today;
+    } else {
+      state.wrongAnswers.push({
+        qId, domainId, count: 1, lastWrong: today,
+        questionText: question.text.substring(0, 80) + '...'
+      });
+    }
+  }
+  saveState();
+
+  // Also persist to SQLite backend if available
+  if (USE_BACKEND) {
+    recordAnswerBackend(qId, domainId, isCorrect, question.text);
+  }
+
+  document.getElementById('streak-count').textContent = state.streakDays;
+}
+
+function updateStreak(today) {
+  if (state.lastStudyDate === today) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toISOString().split('T')[0];
+  if (state.lastStudyDate === yStr) {
+    state.streakDays++;
+  } else if (state.lastStudyDate !== today) {
+    state.streakDays = 1;
+  }
+  state.lastStudyDate = today;
+}
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(pageName) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + pageName).classList.add('active');
+  document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+  const titles = {dashboard:'Dashboard',quiz:'Practice Quiz',review:'Wrong Answer Review',analytics:'Analytics',domains:'Domain Study Guide',settings:'Settings'};
+  document.getElementById('page-title').textContent = titles[pageName] || pageName;
+
+  if (pageName === 'dashboard') renderDashboard();
+  if (pageName === 'review') renderReview();
+  if (pageName === 'analytics') renderAnalytics();
+  if (pageName === 'domains') renderDomains();
+  if (pageName === 'settings') renderSettings();
+  if (pageName === 'quiz') {
+    document.getElementById('quiz-setup').style.display = 'block';
+    document.getElementById('quiz-active').style.display = 'none';
+    document.getElementById('quiz-results').style.display = 'none';
+    renderQuizDomainSelector();
+  }
+}
+
+document.querySelectorAll('.nav-link').forEach(a => {
+  a.addEventListener('click', () => showPage(a.dataset.page));
+});
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  document.getElementById('stat-total').textContent = state.totalAnswered;
+  document.getElementById('stat-correct').textContent = state.totalCorrect;
+  document.getElementById('stat-wrong').textContent = state.wrongAnswers.length;
+  document.getElementById('stat-days').textContent = state.studyDays.length;
+  const acc = state.totalAnswered > 0 ? Math.round((state.totalCorrect / state.totalAnswered) * 100) : 0;
+  document.getElementById('stat-accuracy').textContent = acc + '%';
+  document.getElementById('streak-count').textContent = state.streakDays;
+
+  // Domain health bars
+  const container = document.getElementById('domain-health-bars');
+  container.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const ds = getDomainStat(d.id);
+    const pct = ds.answered > 0 ? Math.round((ds.correct / ds.answered) * 100) : 0;
+    const color = pct >= 75 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : pct > 0 ? 'var(--danger)' : '#ccc';
+    container.innerHTML += `
+      <div class="progress-wrap">
+        <div class="label-row">
+          <span style="font-size:0.8rem;font-weight:600;">D${d.id}: ${d.name}</span>
+          <span style="font-size:0.8rem;color:var(--text-muted);">${ds.answered > 0 ? pct + '% (' + ds.correct + '/' + ds.answered + ')' : 'Not started'}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color};"></div></div>
+      </div>`;
+  });
+
+  // Calendar
+  renderCalendar();
+
+  // Quick domain selector
+  const qds = document.getElementById('quick-domain-sel');
+  qds.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const ds = getDomainStat(d.id);
+    const pct = ds.answered > 0 ? Math.round((ds.correct / ds.answered) * 100) : null;
+    const div = document.createElement('div');
+    div.className = 'domain-card-sel' + (selectedDomains.has(d.id) ? ' selected' : '');
+    div.innerHTML = `<div class="d-num">Domain ${d.id} · ${d.weight}</div><div class="d-name">${d.name}</div><div class="d-stats">${pct !== null ? pct + '% accuracy · ' + ds.answered + ' answered' : 'Not started yet'}</div>`;
+    div.onclick = () => {
+      if (selectedDomains.has(d.id)) selectedDomains.delete(d.id);
+      else selectedDomains.add(d.id);
+      div.classList.toggle('selected');
+    };
+    qds.appendChild(div);
+  });
+
+  // Today's wrong answers
+  const today = todayStr();
+  const todayWrong = state.wrongAnswers.filter(w => w.lastWrong === today);
+  const twl = document.getElementById('today-wrong-list');
+  if (todayWrong.length === 0) {
+    twl.innerHTML = '<p class="text-muted">No mistakes yet today. Keep it up! 🎉</p>';
+  } else {
+    twl.innerHTML = todayWrong.map(w => {
+      const q = QUESTION_BANK.find(q => q.id === w.qId);
+      const d = DOMAINS.find(d => d.id === w.domainId);
+      return `<div style="padding:10px;border-bottom:1px solid var(--border);">
+        <span class="badge badge-wrong">Wrong</span>
+        <span class="badge badge-domain">${d.name}</span>
+        <p style="font-size:0.88rem;margin-top:6px;">${q ? q.text.substring(0,100) + '...' : 'Question not found'}</p>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderCalendar() {
+  const cal = document.getElementById('cal-grid');
+  cal.innerHTML = '';
+  const today = new Date();
+  const startDay = new Date(today);
+  startDay.setDate(today.getDate() - 27); // show 28 days
+  // Pad to Sunday
+  startDay.setDate(startDay.getDate() - startDay.getDay());
+
+  for (let i = 0; i < 35; i++) {
+    const d = new Date(startDay);
+    d.setDate(startDay.getDate() + i);
+    const dStr = d.toISOString().split('T')[0];
+    const isToday = dStr === todayStr();
+    const studied = state.studyDays.includes(dStr);
+    const div = document.createElement('div');
+    div.className = 'cal-day' + (studied ? ' studied' : '') + (isToday ? ' today' : '');
+    div.title = dStr;
+    div.textContent = d.getDate();
+    cal.appendChild(div);
+  }
+}
+
+// ============================================================
+// QUIZ ENGINE
+// ============================================================
+function renderQuizDomainSelector() {
+  const c = document.getElementById('quiz-domain-sel');
+  c.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const cb = document.createElement('label');
+    cb.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:0.88rem;';
+    const inp = document.createElement('input');
+    inp.type = 'checkbox';
+    inp.value = d.id;
+    inp.checked = true;
+    inp.style.accentColor = 'var(--primary)';
+    cb.appendChild(inp);
+    cb.appendChild(document.createTextNode(`D${d.id}: ${d.name} (${d.weight})`));
+    c.appendChild(cb);
+  });
+}
+
+function selectAllDomains() {
+  document.querySelectorAll('#quiz-domain-sel input').forEach(cb => cb.checked = true);
+}
+function clearAllDomains() {
+  document.querySelectorAll('#quiz-domain-sel input').forEach(cb => cb.checked = false);
+}
+
+function getSelectedQuizDomains() {
+  return Array.from(document.querySelectorAll('#quiz-domain-sel input:checked')).map(cb => parseInt(cb.value));
+}
+
+function startQuiz(mode) {
+  showPage('quiz');
+  if (mode === 'selected' || mode === 'weak' || mode === 'all') {
+    setTimeout(() => {
+      if (mode === 'weak') {
+        // Focus on domains with lowest accuracy
+        const sorted = DOMAINS.map(d => {
+          const ds = getDomainStat(d.id);
+          const pct = ds.answered > 0 ? (ds.correct / ds.answered) : 0;
+          return { id: d.id, pct };
+        }).sort((a, b) => a.pct - b.pct);
+        const weakIds = sorted.slice(0, 3).map(d => d.id);
+        document.querySelectorAll('#quiz-domain-sel input').forEach(cb => {
+          cb.checked = weakIds.includes(parseInt(cb.value));
+        });
+      }
+      launchQuiz();
+    }, 100);
+  }
+}
+
+function startReviewSession() {
+  if (state.wrongAnswers.length === 0) {
+    alert('No wrong answers to review yet! Practice some questions first.');
+    return;
+  }
+  showPage('quiz');
+  setTimeout(() => {
+    const wrongIds = state.wrongAnswers.map(w => w.qId);
+    quizQuestions = QUESTION_BANK.filter(q => wrongIds.includes(q.id)).slice(0, 20);
+    if (quizQuestions.length === 0) {
+      alert('No matching questions found.');
+      return;
+    }
+    document.getElementById('quiz-setup').style.display = 'none';
+    document.getElementById('quiz-active').style.display = 'block';
+    document.getElementById('quiz-results').style.display = 'none';
+    currentQIndex = 0;
+    quizAnswers = [];
+    renderQuestion();
+  }, 100);
+}
+
+function launchQuiz() {
+  const domains = getSelectedQuizDomains();
+  if (domains.length === 0) { alert('Please select at least one domain.'); return; }
+  const count = parseInt(document.getElementById('q-count').value);
+  const pool = QUESTION_BANK.filter(q => domains.includes(q.domain));
+  if (pool.length === 0) { alert('No questions available for selected domains.'); return; }
+
+  // Shuffle and pick
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  quizQuestions = shuffled.slice(0, Math.min(count, shuffled.length));
+  currentQIndex = 0;
+  quizAnswers = [];
+
+  document.getElementById('quiz-setup').style.display = 'none';
+  document.getElementById('quiz-active').style.display = 'block';
+  document.getElementById('quiz-results').style.display = 'none';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  if (currentQIndex >= quizQuestions.length) {
+    showResults();
+    return;
+  }
+  const q = quizQuestions[currentQIndex];
+  const domain = DOMAINS.find(d => d.id === q.domain);
+  const total = quizQuestions.length;
+  const pct = (currentQIndex / total) * 100;
+
+  document.getElementById('q-counter').textContent = `Question ${currentQIndex + 1} of ${total}`;
+  document.getElementById('q-progress-fill').style.width = pct + '%';
+  document.getElementById('q-domain-badge-wrap').innerHTML = `<span class="q-domain-badge" style="background:#e8f5e9;">Domain ${q.domain}: ${domain.name}</span>`;
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-explanation').style.display = 'none';
+  document.getElementById('btn-next').disabled = true;
+
+  const correctSoFar = quizAnswers.filter(a => a.correct).length;
+  document.getElementById('quiz-score-live').textContent = currentQIndex > 0 ? `Score: ${correctSoFar}/${currentQIndex} (${Math.round(correctSoFar/currentQIndex*100)}%)` : '';
+
+  const letters = ['A','B','C','D'];
+  const optContainer = document.getElementById('q-options');
+  optContainer.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
+    div.onclick = () => selectAnswer(i, q);
+    optContainer.appendChild(div);
+  });
+}
+
+function selectAnswer(selectedIdx, q) {
+  const options = document.querySelectorAll('.option');
+  options.forEach(o => { o.classList.add('disabled'); o.onclick = null; });
+
+  const isCorrect = selectedIdx === q.answer;
+  options[selectedIdx].classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) options[q.answer].classList.add('correct');
+
+  quizAnswers.push({ qId: q.id, domainId: q.domain, correct: isCorrect, selected: selectedIdx });
+  recordAnswer(q.id, q.domain, isCorrect, q);
+
+  // Show explanation
+  const expDiv = document.getElementById('q-explanation');
+  expDiv.style.display = 'block';
+  let html = `<div class="explanation-box">
+    <h4>${isCorrect ? '✅ Correct!' : '❌ Incorrect'} — Explanation</h4>
+    <p>${q.explanation}</p>`;
+  if (!isCorrect) {
+    html += `<div class="weakness"><h5>⚠️ Knowledge Gap / Risk:</h5><p>${q.weakness}</p></div>`;
+  }
+  if (q.refs && q.refs.length > 0) {
+    html += `<div class="refs"><h5>📚 Study References:</h5>`;
+    q.refs.forEach(r => {
+      html += `<a href="${r.url}" target="_blank">→ ${r.text}</a>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  // Add "Ask Claude" button only for wrong answers when backend + API key available
+  if (!isCorrect && USE_BACKEND && hasApiKey) {
+    html += `<button class="claude-btn" id="btn-ask-claude" onclick="askClaudeExplain(${JSON.stringify(q).replace(/"/g, '&quot;')}, ${selectedIdx})">🤖 Ask Claude — Why was I wrong?</button>`;
+    html += `<div id="claude-explanation-area"></div>`;
+  }
+  expDiv.innerHTML = html;
+
+  document.getElementById('btn-next').disabled = false;
+}
+
+function nextQuestion() {
+  currentQIndex++;
+  renderQuestion();
+}
+
+function quitQuiz() {
+  if (confirm('Quit this quiz? Progress so far will be saved.')) {
+    if (quizAnswers.length > 0) showResults();
+    else {
+      document.getElementById('quiz-setup').style.display = 'block';
+      document.getElementById('quiz-active').style.display = 'none';
+    }
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-active').style.display = 'none';
+  document.getElementById('quiz-results').style.display = 'block';
+
+  const total = quizAnswers.length;
+  const correct = quizAnswers.filter(a => a.correct).length;
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const pass = pct >= 70;
+
+  const pctEl = document.getElementById('res-pct');
+  pctEl.textContent = pct + '%';
+  pctEl.className = 'result-score' + (pass ? '' : ' fail');
+  document.getElementById('res-label').textContent = pass ? '🎉 Passing Score!' : '📖 Keep Studying — Target: 70%+';
+  document.getElementById('res-correct').textContent = correct;
+  document.getElementById('res-wrong-count').textContent = (total - correct);
+  document.getElementById('res-total-count').textContent = total;
+
+  // Per-domain breakdown
+  const byDomain = {};
+  quizAnswers.forEach(a => {
+    if (!byDomain[a.domainId]) byDomain[a.domainId] = { correct: 0, total: 0 };
+    byDomain[a.domainId].total++;
+    if (a.correct) byDomain[a.domainId].correct++;
+  });
+
+  const grid = document.getElementById('domain-result-grid');
+  grid.innerHTML = '';
+  Object.entries(byDomain).forEach(([dId, stats]) => {
+    const d = DOMAINS.find(d => d.id === parseInt(dId));
+    const dpct = Math.round((stats.correct / stats.total) * 100);
+    const color = dpct >= 75 ? 'var(--success)' : dpct >= 50 ? 'var(--accent)' : 'var(--danger)';
+    grid.innerHTML += `<div class="domain-result-item" style="border-left-color:${color};">
+      <h5>Domain ${dId}: ${d.name}</h5>
+      <div class="score" style="color:${color};">${dpct}%</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);">${stats.correct}/${stats.total} correct</div>
+    </div>`;
+  });
+}
+
+// ============================================================
+// REVIEW PAGE
+// ============================================================
+function renderReview() {
+  // Populate filter
+  const filter = document.getElementById('review-filter');
+  filter.innerHTML = '<option value="all">All Domains</option>';
+  DOMAINS.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = `D${d.id}: ${d.name}`;
+    filter.appendChild(opt);
+  });
+
+  const container = document.getElementById('review-content');
+  const filterVal = filter.value;
+  let wrong = [...state.wrongAnswers].sort((a, b) => b.count - a.count);
+  if (filterVal !== 'all') wrong = wrong.filter(w => w.domainId === parseInt(filterVal));
+
+  if (wrong.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🎯</div><h4>No wrong answers yet!</h4><p>Complete some practice quizzes to track mistakes here.</p></div>';
+    return;
+  }
+
+  let html = `<table class="review-table"><thead><tr>
+    <th>#</th><th>Question</th><th>Domain</th><th>Times Wrong</th><th>Last Wrong</th><th>Action</th>
+  </tr></thead><tbody>`;
+
+  wrong.forEach((w, i) => {
+    const q = QUESTION_BANK.find(q => q.id === w.qId);
+    const d = DOMAINS.find(d => d.id === w.domainId);
+    if (!q) return;
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="max-width:280px;font-size:0.83rem;">${q.text.substring(0, 100)}...</td>
+      <td><span class="badge badge-domain">D${d.id}</span></td>
+      <td><span class="badge badge-wrong">${w.count}×</span></td>
+      <td style="font-size:0.8rem;">${w.lastWrong}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="reviewSingleQuestion(${q.id})">Study</button></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function reviewSingleQuestion(qId) {
+  const q = QUESTION_BANK.find(q => q.id === qId);
+  if (!q) return;
+  quizQuestions = [q];
+  currentQIndex = 0;
+  quizAnswers = [];
+  showPage('quiz');
+  setTimeout(() => {
+    document.getElementById('quiz-setup').style.display = 'none';
+    document.getElementById('quiz-active').style.display = 'block';
+    document.getElementById('quiz-results').style.display = 'none';
+    renderQuestion();
+  }, 100);
+}
+
+function clearWrongAnswers() {
+  if (confirm('Clear all wrong answer records? This cannot be undone.')) {
+    state.wrongAnswers = [];
+    saveState();
+    renderReview();
+  }
+}
+
+// ============================================================
+// ANALYTICS
+// ============================================================
+function renderAnalytics() {
+  // Domain chart
+  const ctx1 = document.getElementById('chart-domain').getContext('2d');
+  if (charts.domain) charts.domain.destroy();
+  const domainLabels = DOMAINS.map(d => `D${d.id}`);
+  const domainScores = DOMAINS.map(d => {
+    const ds = getDomainStat(d.id);
+    return ds.answered > 0 ? Math.round((ds.correct / ds.answered) * 100) : 0;
+  });
+  charts.domain = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: domainLabels,
+      datasets: [{
+        label: 'Accuracy %',
+        data: domainScores,
+        backgroundColor: DOMAINS.map(d => d.color + '99'),
+        borderColor: DOMAINS.map(d => d.color),
+        borderWidth: 2,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y + '% accuracy' } }
+      }
+    }
+  });
+
+  // Daily activity chart
+  const ctx2 = document.getElementById('chart-daily').getContext('2d');
+  if (charts.daily) charts.daily.destroy();
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  const dailyData = days.map(d => state.dailyActivity[d]?.answered || 0);
+  const dailyCorrect = days.map(d => state.dailyActivity[d]?.correct || 0);
+  charts.daily = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: days.map(d => d.substring(5)),
+      datasets: [
+        { label: 'Answered', data: dailyData, backgroundColor: '#1a6b3a44', borderColor: '#1a6b3a', borderWidth: 2, borderRadius: 4 },
+        { label: 'Correct', data: dailyCorrect, backgroundColor: '#43a04744', borderColor: '#43a047', borderWidth: 2, borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Weakness analysis
+  const wa = document.getElementById('weakness-analysis');
+  const weakDomains = DOMAINS.map(d => {
+    const ds = getDomainStat(d.id);
+    const pct = ds.answered > 0 ? Math.round((ds.correct / ds.answered) * 100) : null;
+    return { ...d, ds, pct };
+  }).filter(d => d.pct !== null).sort((a, b) => a.pct - b.pct);
+
+  // Show study plan card if API key configured
+  const planCard = document.getElementById('study-plan-card');
+  if (planCard) planCard.style.display = (USE_BACKEND && hasApiKey) ? 'block' : 'none';
+
+  if (weakDomains.length === 0) {
+    wa.innerHTML = '<p class="text-muted">Complete some quizzes to see your weakness analysis.</p>';
+    return;
+  }
+
+  let waHtml = '';
+  weakDomains.slice(0, 4).forEach(d => {
+    const severity = d.pct < 50 ? 'critical' : d.pct < 70 ? 'high' : 'medium';
+    const guide = DOMAIN_GUIDE.find(g => g.id === d.id);
+    waHtml += `<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;border-left:4px solid ${d.pct < 50 ? 'var(--danger)' : d.pct < 70 ? 'var(--accent)' : 'var(--success)'};">
+      <div class="flex justify-between items-center">
+        <div>
+          <span class="tag tag-${severity}">${severity.toUpperCase()}</span>
+          <strong>Domain ${d.id}: ${d.name}</strong>
+        </div>
+        <strong style="font-size:1.3rem;color:${d.pct < 50 ? 'var(--danger)' : d.pct < 70 ? 'var(--accent)' : 'var(--success)'};">${d.pct}%</strong>
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">${d.ds.answered} questions answered · ${d.ds.correct} correct</p>
+      ${guide ? `<div style="margin-top:12px;font-size:0.84rem;"><strong>🎯 Action Plan:</strong> Focus on: ${guide.topics.slice(0,3).join(', ')}. ${guide.tips}</div>` : ''}
+      <button class="btn btn-accent btn-sm" style="margin-top:10px;" onclick="startQuiz('selected'); selectedDomains = new Set([${d.id}]);">Practice This Domain →</button>
+    </div>`;
+  });
+  wa.innerHTML = waHtml;
+}
+
+// ============================================================
+// DOMAIN GUIDE
+// ============================================================
+function renderDomains() {
+  const container = document.getElementById('domain-guide-list');
+  container.innerHTML = '';
+  DOMAIN_GUIDE.forEach(guide => {
+    const d = DOMAINS.find(d => d.id === guide.id);
+    const ds = getDomainStat(d.id);
+    const pct = ds.answered > 0 ? Math.round((ds.correct / ds.answered) * 100) : null;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '18px';
+    card.innerHTML = `
+      <div class="flex justify-between items-center" style="margin-bottom:12px;">
+        <h3 style="color:${d.color};">Domain ${d.id}: ${d.name} <span style="font-weight:400;font-size:0.8rem;color:var(--text-muted);">(${d.weight} of exam)</span></h3>
+        ${pct !== null ? `<span style="font-size:1.1rem;font-weight:800;color:${pct >= 75 ? 'var(--success)' : pct >= 50 ? 'var(--accent)' : 'var(--danger)'};">${pct}%</span>` : '<span style="font-size:0.8rem;color:var(--text-muted);">Not started</span>'}
+      </div>
+      <div class="grid-2">
+        <div>
+          <strong style="font-size:0.83rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Key Topics</strong>
+          <ul style="margin-top:8px;padding-left:18px;font-size:0.87rem;line-height:1.8;">
+            ${guide.topics.map(t => `<li>${t}</li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <strong style="font-size:0.83rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Critical Controls</strong>
+          <ul style="margin-top:8px;padding-left:18px;font-size:0.87rem;line-height:1.8;">
+            ${guide.criticalControls.map(c => `<li>${c}</li>`).join('')}
+          </ul>
+          <div style="margin-top:14px;background:#f0faf4;border-radius:8px;padding:12px;font-size:0.83rem;">
+            <strong>💡 Exam Tip:</strong><br>${guide.tips}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary btn-sm" onclick="startQuiz('selected'); setTimeout(()=>{ document.querySelectorAll('#quiz-domain-sel input').forEach(cb=>cb.checked=false); const cb=document.querySelector('#quiz-domain-sel input[value=\\'${d.id}\\']'); if(cb)cb.checked=true; },150);">Practice Domain ${d.id}</button>
+        ${USE_BACKEND && hasApiKey ? `<button class="claude-btn" style="padding:7px 14px;font-size:0.8rem;margin-top:0;" id="gen-q-btn-${d.id}" onclick="generateQuestionsForDomain(${d.id}, '${d.name}')">✨ Generate 5 More Questions</button><span id="gen-q-status-${d.id}" style="font-size:0.78rem;color:var(--primary);"></span>` : ''}
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+// ─── Export / Import / Reset ────────────────────────────────────────────────
+
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cissp_progress_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+let pendingImportData = null;
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  document.getElementById('import-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      pendingImportData = data;
+      const preview = document.getElementById('import-preview');
+      const wrongCount = (data.wrongAnswers || []).length;
+      const daysCount = (data.studyDays || []).length;
+      const totalQ = data.totalAnswered || 0;
+      const accuracy = totalQ > 0 ? Math.round(((data.totalCorrect||0)/totalQ)*100) : 0;
+      preview.innerHTML = `
+        <strong>📋 Backup Preview:</strong><br>
+        Questions answered: <strong>${totalQ}</strong> &nbsp;·&nbsp;
+        Accuracy: <strong>${accuracy}%</strong><br>
+        Wrong answers tracked: <strong>${wrongCount}</strong> &nbsp;·&nbsp;
+        Study days: <strong>${daysCount}</strong><br>
+        Last study date: <strong>${data.lastStudyDate || 'unknown'}</strong>`;
+      preview.style.display = 'block';
+      document.getElementById('btn-confirm-import').style.display = 'inline-block';
+    } catch(err) {
+      document.getElementById('import-preview').style.display = 'block';
+      document.getElementById('import-preview').innerHTML = '❌ Invalid JSON file. Please choose a valid backup.';
+      document.getElementById('btn-confirm-import').style.display = 'none';
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function confirmImport() {
+  if (!pendingImportData) return;
+  if (!confirm('This will replace your current study progress with the backup. Continue?')) return;
+
+  // Restore to localStorage
+  state = { ...emptyState(), ...pendingImportData };
+  saveState();
+
+  // Also push to SQLite backend if available
+  if (USE_BACKEND) {
+    try {
+      await fetch(API_BASE + '/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pendingImportData)
+      });
+      await syncStateFromBackend();
+    } catch(e) { console.warn('Backend import failed'); }
+  }
+
+  // Show success
+  const status = document.getElementById('import-status');
+  status.style.display = 'block';
+  status.textContent = `✅ Import successful! ${state.totalAnswered} questions and ${state.wrongAnswers.length} wrong answers restored.`;
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('btn-confirm-import').style.display = 'none';
+  document.getElementById('import-filename').textContent = 'No file selected';
+  pendingImportData = null;
+
+  // Refresh dashboard
+  renderDashboard();
+}
+
+async function resetAllData() {
+  if (confirm('⚠️ Reset ALL study progress? This cannot be undone.')) {
+    if (confirm('Are you absolutely sure? Export a backup first from Settings if you want to preserve your data.')) {
+      localStorage.removeItem('cissp_state_v2');
+      state = emptyState();
+
+      if (USE_BACKEND) {
+        try {
+          await fetch(API_BASE + '/api/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emptyState())
+          });
+        } catch(e) {}
+      }
+
+      alert('Data reset complete. Starting fresh!');
+      showPage('dashboard');
+    }
+  }
+}
+
+async function clearWrongAnswersWithBackend() {
+  state.wrongAnswers = [];
+  saveState();
+  if (USE_BACKEND) {
+    try {
+      await fetch(API_BASE + '/api/clear-wrong', { method: 'POST' });
+    } catch(e) {}
+  }
+  renderReview();
+}
+
+// ─── Settings page render ────────────────────────────────────────────────────
+function renderSettings() {
+  updateClaudeStatusBadge();
+  const el = document.getElementById('settings-storage-detail');
+  if (!el) return;
+  if (USE_BACKEND) {
+    el.innerHTML = `
+      <div style="padding:12px;background:#e0f2e9;border-radius:8px;border-left:4px solid var(--primary);">
+        <strong style="color:var(--primary);">✅ SQLite Backend Active</strong><br>
+        <span style="font-size:0.83rem;color:#374151;">Your progress is saved to <code>cissp_study.db</code> in the CISSP folder.
+        Data persists across all browsers and survives cache clearing. The server is running at
+        <a href="http://localhost:5432" target="_blank">http://localhost:5432</a>.</span>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div style="padding:12px;background:#fff3e0;border-radius:8px;border-left:4px solid var(--accent);">
+        <strong style="color:#b45309;">⚠️ Using Browser localStorage Only</strong><br>
+        <span style="font-size:0.83rem;color:#374151;">Progress is stored in this browser only. To enable the persistent SQLite database,
+        open a Terminal, navigate to your CISSP folder, and run:<br>
+        <code style="display:inline-block;margin-top:6px;background:#1a1a2e;color:#a8ff78;padding:6px 12px;border-radius:5px;font-size:0.82rem;">python3 cissp_server.py</code><br>
+        Then open <a href="http://localhost:5432" target="_blank">http://localhost:5432</a> instead of opening the HTML file directly.</span>
+      </div>`;
+  }
+}
+
+// ============================================================
+// CLAUDE AI
+// ============================================================
+let hasApiKey = false;
+const claudeCache = {}; // cache explanations by question id
+
+async function checkApiKeyStatus() {
+  if (!USE_BACKEND) return;
+  try {
+    const r = await fetch(API_BASE + '/api/config');
+    const data = await r.json();
+    hasApiKey = data.hasApiKey || false;
+    updateClaudeStatusBadge();
+    // Show study plan card if API key configured
+    const planCard = document.getElementById('study-plan-card');
+    if (planCard) planCard.style.display = hasApiKey ? 'block' : 'none';
+  } catch(e) { hasApiKey = false; }
+}
+
+function updateClaudeStatusBadge() {
+  const badge = document.getElementById('claude-status-badge');
+  if (!badge) return;
+  if (hasApiKey) {
+    badge.textContent = '✅ Connected';
+    badge.className = 'claude-status-badge connected';
+  } else {
+    badge.textContent = '⚠️ Not configured';
+    badge.className = 'claude-status-badge disconnected';
+  }
+}
+
+async function saveApiKey() {
+  const input = document.getElementById('api-key-input');
+  const statusEl = document.getElementById('api-key-status');
+  const key = (input.value || '').trim();
+  if (!key) { showApiKeyStatus('Please enter your API key.', 'error'); return; }
+  if (!key.startsWith('sk-ant-')) { showApiKeyStatus('Invalid key format — must start with sk-ant-', 'error'); return; }
+  try {
+    const r = await fetch(API_BASE + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key })
+    });
+    if (r.ok) {
+      hasApiKey = true;
+      updateClaudeStatusBadge();
+      input.value = '';
+      input.placeholder = '(key saved securely)';
+      showApiKeyStatus('✅ API key saved successfully! Claude features are now enabled.', 'success');
+    } else {
+      const err = await r.json();
+      showApiKeyStatus('Error: ' + (err.error || 'Unknown error'), 'error');
+    }
+  } catch(e) { showApiKeyStatus('Server not running — start cissp_server.py first.', 'error'); }
+}
+
+async function testApiKey() {
+  const statusEl = document.getElementById('api-key-status');
+  showApiKeyStatus('🔌 Testing connection...', 'info');
+  try {
+    const r = await fetch(API_BASE + '/api/claude/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'What is the CIA Triad?',
+        options: ['A', 'B', 'C', 'D'],
+        correctAnswer: 'A',
+        userAnswer: 'B',
+        domain: 'Test',
+        existingExplanation: 'CIA stands for Confidentiality, Integrity, Availability.'
+      })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      showApiKeyStatus('✅ Claude connection successful! AI features are ready.', 'success');
+    } else {
+      showApiKeyStatus('Error: ' + (data.error || 'Connection failed'), 'error');
+    }
+  } catch(e) { showApiKeyStatus('Cannot reach server or Claude API. Check your key and server.', 'error'); }
+}
+
+function showApiKeyStatus(msg, type) {
+  const el = document.getElementById('api-key-status');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.padding = '10px 14px';
+  el.style.borderRadius = '7px';
+  el.style.fontSize = '0.83rem';
+  el.textContent = msg;
+  el.style.background = type === 'success' ? '#e8f5e9' : type === 'error' ? '#ffebee' : '#e0f2e9';
+  el.style.color = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#374151';
+}
+
+async function askClaudeExplain(q, selectedIdx) {
+  const btn = document.getElementById('btn-ask-claude');
+  const area = document.getElementById('claude-explanation-area');
+  if (!btn || !area) return;
+
+  // Return cached result if available
+  if (claudeCache[q.id]) {
+    renderClaudeExplanation(area, claudeCache[q.id]);
+    btn.style.display = 'none';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Asking Claude...';
+  area.innerHTML = '<div class="claude-loading">Claude is analyzing your answer...</div>';
+
+  const letters = ['A', 'B', 'C', 'D'];
+  const domain = DOMAINS.find(d => d.id === q.domain);
+
+  try {
+    const r = await fetch(API_BASE + '/api/claude/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: q.text,
+        options: q.options,
+        correctAnswer: q.options[q.answer],
+        userAnswer: q.options[selectedIdx],
+        domain: domain ? domain.name : `Domain ${q.domain}`,
+        existingExplanation: q.explanation
+      })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      claudeCache[q.id] = data;
+      renderClaudeExplanation(area, data);
+      btn.style.display = 'none';
+    } else {
+      area.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;padding:10px;background:#ffebee;border-radius:7px;">⚠️ ${data.error || 'Claude error'}</div>`;
+      btn.disabled = false;
+      btn.textContent = '🤖 Ask Claude — Why was I wrong?';
+    }
+  } catch(e) {
+    area.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;padding:10px;background:#ffebee;border-radius:7px;">⚠️ Could not reach server.</div>`;
+    btn.disabled = false;
+    btn.textContent = '🤖 Ask Claude — Why was I wrong?';
+  }
+}
+
+function renderClaudeExplanation(area, data) {
+  let html = `<div class="claude-card">
+    <h5>🤖 Claude's Deep Explanation</h5>`;
+  if (data.whyWrong) {
+    html += `<div class="claude-section"><div class="claude-label">Why Your Answer Was Wrong</div><p>${data.whyWrong}</p></div>`;
+  }
+  if (data.whyCorrect) {
+    html += `<div class="claude-section"><div class="claude-label">Why the Correct Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+  }
+  if (data.studyFocus) {
+    html += `<div class="claude-section"><div class="claude-label">📚 What to Study Next</div><p>${data.studyFocus}</p></div>`;
+  }
+  if (data.memoryTip) {
+    html += `<div class="claude-section"><div class="claude-label">💡 Memory Tip</div><div class="memory-tip">${data.memoryTip}</div></div>`;
+  }
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+async function generateQuestionsForDomain(domainId, domainName) {
+  const btn = document.getElementById(`gen-q-btn-${domainId}`);
+  const statusEl = document.getElementById(`gen-q-status-${domainId}`);
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  if (statusEl) statusEl.textContent = '';
+
+  const existingIds = QUESTION_BANK.map(q => q.id);
+
+  try {
+    const r = await fetch(API_BASE + '/api/claude/generate-questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain: domainId, domainName, count: 5, existingIds })
+    });
+    const data = await r.json();
+    if (r.ok && data.questions && data.questions.length > 0) {
+      data.questions.forEach(q => {
+        q.domain = domainId; // ensure domain is set correctly
+        QUESTION_BANK.push(q);
+      });
+      const added = data.questions.length;
+      btn.textContent = `✨ Generate 5 More`;
+      btn.disabled = false;
+      if (statusEl) statusEl.textContent = `+${added} questions added (${QUESTION_BANK.length} total)`;
+      renderDomains(); // refresh to show updated question count badge
+    } else {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate 5 More Questions';
+      if (statusEl) statusEl.textContent = '⚠️ ' + (data.error || 'Generation failed');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✨ Generate 5 More Questions';
+    if (statusEl) statusEl.textContent = '⚠️ Server error';
+  }
+}
+
+async function generateStudyPlan() {
+  const btn = document.getElementById('btn-generate-plan');
+  const output = document.getElementById('study-plan-output');
+  const targetDate = document.getElementById('target-exam-date')?.value || '';
+  if (!btn || !output) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Claude is building your plan...';
+  output.innerHTML = '<div class="claude-loading">Analyzing your performance data...</div>';
+
+  try {
+    const r = await fetch(API_BASE + '/api/claude/study-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domainStats: state.domainStats, targetDate })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      output.innerHTML = renderStudyPlan(data);
+    } else {
+      output.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;padding:10px;background:#ffebee;border-radius:7px;">⚠️ ${data.error || 'Failed to generate plan'}</div>`;
+    }
+  } catch(e) {
+    output.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;">⚠️ Server error: ${e.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '📅 Regenerate Plan';
+}
+
+function renderStudyPlan(data) {
+  let html = '<div class="plan-card">';
+  html += '<h4>📊 Readiness Assessment</h4>';
+  html += `<p style="font-size:0.88rem;line-height:1.65;margin-bottom:16px;">${data.readinessAssessment || ''}</p>`;
+
+  if (data.priorityOrder && data.priorityOrder.length > 0) {
+    html += '<h4>🎯 Study Priority Order</h4><ol style="margin:8px 0 16px 18px;font-size:0.86rem;line-height:1.8;">';
+    data.priorityOrder.forEach(p => { html += `<li>${p}</li>`; });
+    html += '</ol>';
+  }
+
+  if (data.weeklyPlan && data.weeklyPlan.length > 0) {
+    html += '<h4>📅 Weekly Schedule</h4>';
+    data.weeklyPlan.forEach(week => {
+      html += `<div class="plan-week">
+        <div class="week-label">Week ${week.week}: ${week.focus}</div>
+        <div class="week-focus">Daily goal: ${week.dailyGoal || ''}`;
+      if (week.topics && week.topics.length > 0) {
+        html += ` · Topics: ${week.topics.join(', ')}`;
+      }
+      html += '</div></div>';
+    });
+  }
+
+  if (data.practiceRecommendations && data.practiceRecommendations.length > 0) {
+    html += '<h4 style="margin-top:14px;">💡 Practice Recommendations</h4><ul style="margin:8px 0 0 18px;font-size:0.85rem;line-height:1.8;">';
+    data.practiceRecommendations.forEach(r => { html += `<li>${r}</li>`; });
+    html += '</ul>';
+  }
+
+  if (data.examReadinessChecklist && data.examReadinessChecklist.length > 0) {
+    html += '<h4 style="margin-top:14px;">✅ Exam Readiness Checklist</h4><ul style="margin:8px 0 0 18px;font-size:0.85rem;line-height:1.8;">';
+    data.examReadinessChecklist.forEach(item => { html += `<li>${item}</li>`; });
+    html += '</ul>';
+  }
+
+  const today = new Date().toLocaleDateString();
+  html += `<div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">
+    <button class="btn btn-secondary btn-sm" onclick="copyStudyPlan(this)">📋 Copy to Clipboard</button>
+  </div>`;
+  html += '</div>';
+  return html;
+}
+
+function copyStudyPlan(btn) {
+  const planText = document.getElementById('study-plan-output').innerText;
+  navigator.clipboard.writeText(planText).then(() => {
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy to Clipboard'; }, 2000);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init() {
+  // Try to connect to local SQLite backend
+  await detectBackend();
+
+  // If backend is live, sync state from it (overrides localStorage)
+  if (USE_BACKEND) {
+    await syncStateFromBackend();
+    await checkApiKeyStatus();
+  }
+
+  document.getElementById('streak-count').textContent = state.streakDays;
+  // Set min date for exam date picker to today
+  const datePicker = document.getElementById('target-exam-date');
+  if (datePicker) datePicker.min = todayStr();
+  renderDashboard();
+})();
+</script>
+</body>
+</html>

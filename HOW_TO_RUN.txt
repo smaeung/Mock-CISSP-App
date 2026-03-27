@@ -1,0 +1,59 @@
+╔══════════════════════════════════════════════════════════════╗
+║           🛡️  CISSP Study App — How to Run                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+There are TWO ways to use this app:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPTION A — WITH SQLite Backend (RECOMMENDED)
+Persistent database that survives browser cache clearing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+macOS: Double-click  →  START_CISSP_APP.command
+
+   — OR —
+
+Open Terminal, then run:
+   cd /path/to/your/CISSP/folder
+   python3 cissp_server.py
+
+Then open your browser to:
+   http://localhost:5432
+
+Your data is saved to:  cissp_study.db  (in this folder)
+To stop the server:     Press Ctrl+C in Terminal
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPTION B — STANDALONE (No server needed)
+Uses browser localStorage — simpler but less durable
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Just open:  CISSP_Study_App.html  in any browser.
+
+Data lives in the browser — do NOT clear browser data.
+Use Settings → Export to back up your progress.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKUP & RESTORE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To back up your progress:
+   Go to Settings → Export Progress (JSON) → saves .json file
+
+To restore/import on a new device or browser:
+   Go to Settings → Import → Choose Backup File → Confirm Import
+   (Works for both standalone and server modes)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILES IN THIS FOLDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CISSP_Study_App.html     — The web app (open directly OR via server)
+cissp_server.py          — Local Python server with SQLite backend
+START_CISSP_APP.command  — macOS double-click launcher
+cissp_study.db           — SQLite database (created when server runs)
+HOW_TO_RUN.txt           — This file
+CISSP_Study_Plan_Sungho.docx — Your 16-week study plan document
