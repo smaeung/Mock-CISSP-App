@@ -479,7 +479,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
         <hr class="divider">
         <p class="text-muted" style="font-size:0.82rem;line-height:1.7;">
           <strong>What Claude AI enables:</strong><br>
-          ✅ <strong>Ask Claude</strong> — Deep explanation of wrong answers after each quiz question<br>
+          ✅ <strong>Ask Claude</strong> — Deep explanation after every answer: why correct answers are right and why wrong options are traps<br>
           ✅ <strong>Generate Questions</strong> — Add 5 new CISSP questions per domain on demand<br>
           ✅ <strong>Study Plan</strong> — Personalized weekly schedule based on your performance gaps
         </p>
@@ -1004,9 +1004,12 @@ function selectAnswer(selectedIdx, q) {
     html += '</div>';
   }
   html += '</div>';
-  // Add "Ask Claude" button only for wrong answers when backend + API key available
-  if (!isCorrect && USE_BACKEND && hasApiKey) {
-    html += `<button class="claude-btn" id="btn-ask-claude" onclick="askClaudeExplain(${JSON.stringify(q).replace(/"/g, '&quot;')}, ${selectedIdx})">🤖 Ask Claude — Why was I wrong?</button>`;
+  // Add "Ask Claude" button for all answers when backend + API key available
+  if (USE_BACKEND && hasApiKey) {
+    const btnLabel = isCorrect
+      ? '🤖 Ask Claude — Why is this correct?'
+      : '🤖 Ask Claude — Why was I wrong?';
+    html += `<button class="claude-btn" id="btn-ask-claude" onclick="askClaudeExplain(${JSON.stringify(q).replace(/"/g, '&quot;')}, ${selectedIdx})">${btnLabel}</button>`;
     html += `<div id="claude-explanation-area"></div>`;
   }
   expDiv.innerHTML = html;
@@ -1515,18 +1518,21 @@ async function askClaudeExplain(q, selectedIdx) {
   const area = document.getElementById('claude-explanation-area');
   if (!btn || !area) return;
 
+  const isCorrect = selectedIdx === q.answer;
+  // Use separate cache keys for correct vs wrong so the prompt differs
+  const cacheKey = `${q.id}-${isCorrect ? 'correct' : 'wrong'}`;
+
   // Return cached result if available
-  if (claudeCache[q.id]) {
-    renderClaudeExplanation(area, claudeCache[q.id]);
+  if (claudeCache[cacheKey]) {
+    renderClaudeExplanation(area, claudeCache[cacheKey], isCorrect);
     btn.style.display = 'none';
     return;
   }
 
   btn.disabled = true;
   btn.textContent = '⏳ Asking Claude...';
-  area.innerHTML = '<div class="claude-loading">Claude is analyzing your answer...</div>';
+  area.innerHTML = '<div class="claude-loading">Claude is analyzing this question...</div>';
 
-  const letters = ['A', 'B', 'C', 'D'];
   const domain = DOMAINS.find(d => d.id === q.domain);
 
   try {
@@ -1538,38 +1544,49 @@ async function askClaudeExplain(q, selectedIdx) {
         options: q.options,
         correctAnswer: q.options[q.answer],
         userAnswer: q.options[selectedIdx],
+        isCorrect,
         domain: domain ? domain.name : `Domain ${q.domain}`,
         existingExplanation: q.explanation
       })
     });
     const data = await r.json();
     if (r.ok) {
-      claudeCache[q.id] = data;
-      renderClaudeExplanation(area, data);
+      claudeCache[cacheKey] = data;
+      renderClaudeExplanation(area, data, isCorrect);
       btn.style.display = 'none';
     } else {
       area.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;padding:10px;background:#ffebee;border-radius:7px;">⚠️ ${data.error || 'Claude error'}</div>`;
       btn.disabled = false;
-      btn.textContent = '🤖 Ask Claude — Why was I wrong?';
+      btn.textContent = isCorrect ? '🤖 Ask Claude — Why is this correct?' : '🤖 Ask Claude — Why was I wrong?';
     }
   } catch(e) {
     area.innerHTML = `<div style="color:var(--danger);font-size:0.84rem;padding:10px;background:#ffebee;border-radius:7px;">⚠️ Could not reach server.</div>`;
     btn.disabled = false;
-    btn.textContent = '🤖 Ask Claude — Why was I wrong?';
+    btn.textContent = isCorrect ? '🤖 Ask Claude — Why is this correct?' : '🤖 Ask Claude — Why was I wrong?';
   }
 }
 
-function renderClaudeExplanation(area, data) {
+function renderClaudeExplanation(area, data, isCorrect) {
+  const title = isCorrect ? '🤖 Claude\'s Analysis — Correct Answer' : '🤖 Claude\'s Deep Explanation';
   let html = `<div class="claude-card">
-    <h5>🤖 Claude's Deep Explanation</h5>`;
-  if (data.whyWrong) {
-    html += `<div class="claude-section"><div class="claude-label">Why Your Answer Was Wrong</div><p>${data.whyWrong}</p></div>`;
-  }
-  if (data.whyCorrect) {
-    html += `<div class="claude-section"><div class="claude-label">Why the Correct Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+    <h5>${title}</h5>`;
+  if (isCorrect) {
+    if (data.whyCorrect) {
+      html += `<div class="claude-section"><div class="claude-label">✅ Why This Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+    }
+    if (data.whyWrong) {
+      html += `<div class="claude-section"><div class="claude-label">❌ Why the Other Options Are Wrong</div><p>${data.whyWrong}</p></div>`;
+    }
+  } else {
+    if (data.whyWrong) {
+      html += `<div class="claude-section"><div class="claude-label">❌ Why Your Answer Was Wrong</div><p>${data.whyWrong}</p></div>`;
+    }
+    if (data.whyCorrect) {
+      html += `<div class="claude-section"><div class="claude-label">✅ Why the Correct Answer Is Right</div><p>${data.whyCorrect}</p></div>`;
+    }
   }
   if (data.studyFocus) {
-    html += `<div class="claude-section"><div class="claude-label">📚 What to Study Next</div><p>${data.studyFocus}</p></div>`;
+    html += `<div class="claude-section"><div class="claude-label">📚 What to Study</div><p>${data.studyFocus}</p></div>`;
   }
   if (data.memoryTip) {
     html += `<div class="claude-section"><div class="claude-label">💡 Memory Tip</div><div class="memory-tip">${data.memoryTip}</div></div>`;

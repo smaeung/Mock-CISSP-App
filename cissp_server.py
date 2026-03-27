@@ -290,47 +290,70 @@ def handle_claude_explain(body):
     options = body.get("options", [])
     correct_answer = body.get("correctAnswer", "")
     user_answer = body.get("userAnswer", "")
+    is_correct = body.get("isCorrect", False)
     domain = body.get("domain", "")
     existing_explanation = body.get("existingExplanation", "")
 
     system_prompt = (
         "You are an expert CISSP exam coach with deep knowledge of all 8 CISSP domains. "
-        "Your role is to help candidates understand why they got a question wrong and exactly "
-        "what CISSP concepts they need to study to master this topic. "
+        "Help candidates deeply understand every question — whether they got it right or wrong. "
         "Be concise, exam-focused, and practical. Do not pad your response."
     )
 
-    user_message = f"""CISSP Question from Domain: {domain}
+    options_text = chr(10).join(f"{chr(65+i)}. {opt}" for i, opt in enumerate(options))
+
+    if is_correct:
+        user_message = f"""CISSP Question from Domain: {domain}
 
 Question: {question}
 
 Answer choices:
-{chr(10).join(f"{chr(65+i)}. {opt}" for i, opt in enumerate(options))}
+{options_text}
+
+The student selected the CORRECT answer: {correct_answer}
+
+Study guide explanation: {existing_explanation}
+
+The student got this right. Now give them a deeper understanding:
+1. WHY THIS IS CORRECT: The precise CISSP principle or framework concept that makes this the right answer
+2. WHY THE OTHERS ARE WRONG: For each wrong option, briefly explain the specific misconception or trap it represents
+3. STUDY FOCUS: The key CISSP concepts, standards (NIST SP, ISO, (ISC)²), or frameworks that this question tests — to reinforce mastery
+4. MEMORY TIP: One memorable phrase or analogy to lock this in for exam day
+
+Format as JSON with keys: "whyCorrect", "whyWrong", "studyFocus", "memoryTip"
+Return ONLY valid JSON, no markdown code blocks."""
+    else:
+        user_message = f"""CISSP Question from Domain: {domain}
+
+Question: {question}
+
+Answer choices:
+{options_text}
 
 The student selected: {user_answer}
 Correct answer: {correct_answer}
 
-Static explanation from study guide: {existing_explanation}
+Study guide explanation: {existing_explanation}
 
 Please provide:
-1. WHY the student's answer is wrong (specific misconception to avoid)
-2. WHY the correct answer is right (core CISSP concept it tests)
-3. STUDY FOCUS: The specific CISSP concepts, frameworks, or standards to review (be specific — name the NIST SP, ISO standard, or (ISC)2 concept)
+1. WHY WRONG: The specific misconception that led to the wrong answer
+2. WHY CORRECT: The precise CISSP concept or principle that makes the correct answer right
+3. STUDY FOCUS: Specific CISSP concepts, standards (NIST SP, ISO, (ISC)²), or frameworks to review
 4. MEMORY TIP: One memorable phrase or analogy to remember this for the exam
 
-Format your response as JSON with keys: "whyWrong", "whyCorrect", "studyFocus", "memoryTip"
+Format as JSON with keys: "whyWrong", "whyCorrect", "studyFocus", "memoryTip"
 Return ONLY valid JSON, no markdown code blocks."""
 
     try:
-        resp = call_claude(api_key, [{"role": "user", "content": user_message}], system_prompt, max_tokens=800)
+        resp = call_claude(api_key, [{"role": "user", "content": user_message}], system_prompt, max_tokens=900)
         text = resp["content"][0]["text"].strip()
-        # Try to parse as JSON
         try:
             parsed = json.loads(text)
             return parsed, 200
         except json.JSONDecodeError:
-            # Return raw text if JSON parsing fails
-            return {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}, 200
+            fallback = {"whyCorrect": text, "whyWrong": "", "studyFocus": "", "memoryTip": ""} if is_correct \
+                  else {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}
+            return fallback, 200
     except urllib.error.HTTPError as e:
         body_err = e.read().decode()
         return {"error": f"Claude API error: {e.code} — {body_err}"}, 502
