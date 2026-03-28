@@ -1,0 +1,377 @@
+[
+  {
+    "id": 4001,
+    "domain": 4,
+    "text": "A security analyst detects anomalous outbound traffic from a server: 8-byte packets sent every 60 seconds to an external IP on port 443. The traffic uses valid TLS but the volume is unusually regular. No corresponding inbound connections triggered alerts. What does this MOST likely represent and what is the appropriate investigation approach?",
+    "options": [
+      "Normal heartbeat traffic from a monitoring agent — no investigation needed",
+      "This pattern is consistent with Command and Control (C2) beacon traffic: the regularity (60-second intervals), small packet size (8 bytes), encrypted channel (TLS on 443 to blend with HTTPS), and absence of corresponding inbound alerts suggest a compromised host checking in with a C2 server; investigate: identify the process generating traffic, analyze the destination IP reputation and certificate, check for persistence mechanisms, isolate the host, and conduct forensic analysis",
+      "A DNS query loop — the server is making failed DNS lookups that appear as regular network traffic",
+      "Network time protocol (NTP) synchronization traffic — regular 60-second intervals on port 443 indicate NTP over HTTPS"
+    ],
+    "answer": 1,
+    "explanation": "C2 beacon characteristics: (1) Regular timing intervals (beaconing) — distinguishable from human-driven traffic by perfect periodicity; (2) Small, consistent packet sizes; (3) Use of allowed ports (80, 443) and encryption to blend with legitimate traffic; (4) Low volume to avoid data threshold alerts. Investigative steps: process identification (netstat, lsof), destination reputation analysis (VirusTotal, threat intel), TLS certificate analysis (Subject, Issuer), lateral movement investigation, and memory forensics for injected processes. This matches common RAT (Remote Access Trojan) behavior.",
+    "weakness": "C2 detection, beacon traffic analysis, network forensics",
+    "references": ["https://www.cisa.gov/topics/cyber-threats-and-advisories", "https://attack.mitre.org/tactics/TA0011/"]
+  },
+  {
+    "id": 4002,
+    "domain": 4,
+    "text": "A network architect is designing VLAN segmentation for a campus network hosting academic, administrative, research, and guest users. A security review reveals that all VLANs share the same physical switch infrastructure with trunking between all switches. What attack does this enable and how should it be mitigated?",
+    "options": [
+      "VLAN hopping via double tagging or switch spoofing; mitigate by disabling trunking on access ports, using dedicated native VLANs not used for user traffic, enabling BPDU Guard on access ports, and implementing private VLANs for guest isolation",
+      "ARP spoofing — shared physical infrastructure allows all VLANs to see ARP broadcasts from other VLANs",
+      "No attack is enabled — VLANs provide complete logical separation regardless of physical infrastructure sharing",
+      "MAC flooding attacks — a single attacker can flood the switch CAM table affecting all VLANs"
+    ],
+    "answer": 0,
+    "explanation": "VLAN hopping attacks: (1) Double Tagging — attacker on the native VLAN sends frames with two 802.1Q tags; first switch strips outer tag, second switch forwards based on inner tag to a different VLAN — requires attacker to be on the native VLAN; (2) Switch Spoofing — attacker negotiates a trunk link using DTP, gaining access to all VLANs. Mitigations: disable DTP (set all access ports to access mode, not trunk), use a dedicated unused native VLAN, enable BPDU Guard to prevent unauthorized switch connections, and implement 802.1X for network access control.",
+    "weakness": "VLAN hopping, 802.1Q security, switch security",
+    "references": ["https://owasp.org/www-community/attacks/VLAN_hopping"]
+  },
+  {
+    "id": 4003,
+    "domain": 4,
+    "text": "An organization implements a web application firewall (WAF) in front of its customer-facing e-commerce application. During a penetration test, the tester bypasses the WAF using Unicode normalization of SQL injection characters (e.g., using ％27 instead of '). The WAF vendor claims their product is 'up to date.' What does this illustrate about WAF limitations?",
+    "options": [
+      "WAFs are ineffective security controls that should not be used for web application protection",
+      "WAFs operate on rule-based pattern matching that can be bypassed through encoding transformations (Unicode, URL encoding, HTML encoding, hex encoding), HTTP protocol manipulation, and novel attack patterns not yet in the ruleset — WAFs provide defense-in-depth but are not a substitute for secure application development; the correct fix is parameterized queries in the application code, with the WAF as a complementary layer",
+      "The WAF should be upgraded to the vendor's premium tier which includes Unicode normalization",
+      "The penetration tester used an advanced technique not relevant to real-world attacks — the bypass does not represent practical risk"
+    ],
+    "answer": 1,
+    "explanation": "WAF bypass techniques are well-documented: encoding variations (URL encode, double encode, Unicode normalization, HTML entities), case manipulation, comment insertion, HTTP parameter pollution, and request smuggling. WAFs are signature-based and cannot anticipate all evasion techniques. The OWASP recommendation: WAFs are a defense-in-depth layer, not a primary defense. The root cause fix for SQL injection is always parameterized queries/prepared statements — WAFs are a compensating control. Security should not rely on WAF effectiveness alone.",
+    "weakness": "WAF limitations, SQL injection bypass, defense in depth",
+    "references": ["https://owasp.org/www-project-web-security-testing-guide/", "https://owasp.org/www-community/attacks/SQL_Injection"]
+  },
+  {
+    "id": 4004,
+    "domain": 4,
+    "text": "A network team implements BGP peering with two ISPs for redundancy. A security analysis reveals that the BGP configuration accepts all prefixes advertised by both ISPs without filtering. Six months later, the organization receives a notification that their IP range was hijacked — another AS was advertising more-specific prefixes for their IP block. What BGP security control would have mitigated this?",
+    "options": [
+      "Implementing MPLS between the two ISPs to encrypt BGP routing advertisements",
+      "BGP Route Origin Validation using RPKI (Resource Public Key Infrastructure): cryptographically signed Route Origin Authorizations (ROAs) define which AS is authorized to originate each IP prefix; RPKI-enabled routers verify that received BGP announcements match valid ROAs, rejecting invalid or unknown prefix announcements — this directly mitigates BGP hijacking by unauthorized ASes",
+      "Implementing MD5 authentication on BGP sessions to prevent unauthorized BGP speakers from injecting routes",
+      "Deploying a SIEM to monitor BGP routing table changes and alert on unexpected prefix changes"
+    ],
+    "answer": 1,
+    "explanation": "BGP hijacking is a protocol-level vulnerability because BGP has no native authentication of prefix ownership. RPKI (RFC 6811, 6480): (1) IP address holders sign ROAs specifying which AS can originate their prefixes; (2) ROAs are published in a PKI system anchored to Regional Internet Registries; (3) Routers validate received BGP announcements against ROAs; (4) Invalid (wrong AS) or not-found prefixes can be rejected. RPKI is the primary BGP security improvement — MD5 session auth prevents session hijacking but not prefix hijacking from legitimate-but-malicious peers.",
+    "weakness": "BGP security, RPKI, route origin validation",
+    "references": ["https://www.rfc-editor.org/rfc/rfc6811", "https://www.cisa.gov/topics/risk-management/border-gateway-protocol-security"]
+  },
+  {
+    "id": 4005,
+    "domain": 4,
+    "text": "A SOC analyst is investigating an alert for a potential SQL injection attack against a web application. The IDS alert triggered on the pattern 'UNION SELECT'. The analyst reviews the HTTP logs and finds the request contained the exact string 'UNION SELECT' in a product search field. The application returned a normal 200 response. What is the analyst's BEST next step?",
+    "options": [
+      "Close the alert as a false positive — the IDS signature matched a benign search term",
+      "The 200 response with 'UNION SELECT' in input requires investigation: examine the response body for database data disclosure (column names, error messages, unusual data volume); check if the application uses parameterized queries (review source code or WAF logs for query construction); analyze response size differences compared to normal requests; determine if the application is vulnerable through manual testing in a controlled environment — an IDS alert alone doesn't confirm or deny exploitation",
+      "Immediately block the source IP address and escalate to incident response as a confirmed SQL injection attack",
+      "The UNION SELECT pattern is always benign in product searches — update the IDS to reduce false positives for this pattern"
+    ],
+    "answer": 1,
+    "explanation": "Alert investigation requires evidence of actual exploitation, not just pattern matching. 'UNION SELECT' in a search field doesn't confirm SQL injection — it may be matched benignly. Investigation approach: (1) Response body analysis — does the response contain database artifacts? (2) Response size comparison — significantly larger/smaller than baseline? (3) Application source code review — parameterized queries vs. string concatenation? (4) Database query logs — what query actually executed? (5) Controlled testing in non-production environment. Blocking based on IDS pattern alone creates false positive operational impact.",
+    "weakness": "IDS alert investigation, SQL injection analysis, incident triage",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://owasp.org/www-community/attacks/SQL_Injection"]
+  },
+  {
+    "id": 4006,
+    "domain": 4,
+    "text": "An organization's security policy requires that all DNS queries from corporate systems must go through the corporate DNS resolver, not external resolvers. A penetration tester discovers that several workstations successfully resolve domain names by sending DNS over HTTPS (DoH) queries directly to 8.8.8.8:443 (Google), bypassing the corporate resolver. What security capability does this bypass undermine?",
+    "options": [
+      "Performance optimization — corporate DNS resolvers provide faster local caching",
+      "DNS-based security controls that rely on corporate resolver visibility: DNS sinkholes blocking malware domains, RPZ (Response Policy Zones) preventing access to threat intel-flagged domains, DNS query logging for security monitoring, data exfiltration detection via DNS tunnel patterns, and NXDOMAIN analysis for C2 detection — DoH to external providers encrypts DNS queries from corporate monitoring systems, creating blind spots",
+      "DNSSEC validation — corporate resolvers provide DNSSEC while public DoH resolvers do not",
+      "Load balancing — corporate DNS resolvers distribute query load; bypassing them creates performance bottlenecks"
+    ],
+    "answer": 1,
+    "explanation": "Corporate DNS security controls depend on all DNS traffic flowing through monitored resolvers: (1) DNS sinkholes: malware tries to reach C2 → resolver returns sinkhole IP → alert triggered; (2) RPZ: blocks access to threat-intelligence-flagged domains at the DNS layer; (3) DNS tunneling detection: C2 data exfiltration via DNS queries detected by query pattern analysis; (4) Audit trail: all domain lookups logged for forensics. DoH to external resolvers encrypts this traffic from corporate monitoring, making all these controls ineffective. Mitigation: block DoH providers at the firewall (outbound port 443 to known DoH IPs) or proxy DoH through corporate infrastructure.",
+    "weakness": "DNS security, DNS over HTTPS, corporate DNS monitoring",
+    "references": ["https://www.cisa.gov/sites/default/files/publications/CISA_Encrypted_DNS_Implementation_Guide_508.pdf"]
+  },
+  {
+    "id": 4007,
+    "domain": 4,
+    "text": "During a network audit, an analyst discovers an internal host is generating ICMP packets with 65,507 bytes of data in each packet sent to an external IP. Normal ICMP echo requests are 32 bytes. What does this anomalous traffic MOST likely represent?",
+    "options": [
+      "A network administrator running a large ping to test MTU — this is normal network troubleshooting",
+      "This is consistent with data exfiltration via ICMP tunneling: oversized ICMP packets can carry data payloads; tools like icmptunnel and ptunnel use ICMP echo as a covert channel to bypass firewalls that allow ICMP while blocking other protocols; investigate the destination, packet content, and frequency; block oversized ICMP packets at the perimeter firewall and implement ICMP anomaly detection",
+      "A Ping of Death attack — oversized ICMP packets can crash vulnerable systems",
+      "IPv6 fragmentation handling — IPv6 implementations sometimes generate large ICMP packets during MTU discovery"
+    ],
+    "answer": 1,
+    "explanation": "ICMP tunneling exploits the fact that firewalls commonly allow ICMP while blocking TCP/UDP for non-standard destinations. Maximum ICMP data payload is 65,507 bytes. Normal pings use 32-56 bytes of data. 65,507-byte ICMP packets are maximally-filled data carriers — a strong indicator of tunneling. Tools (ptunnel, icmptunnel, DNS2TCP variants) encode data in ICMP echo payloads. Defense: (1) Limit ICMP packet sizes at perimeter (allow up to 1500 bytes); (2) Rate-limit ICMP; (3) Inspect ICMP payloads for protocol signatures; (4) Alert on ICMP to non-local destinations.",
+    "weakness": "ICMP tunneling, covert channels, network anomaly detection",
+    "references": ["https://attack.mitre.org/techniques/T1095/"]
+  },
+  {
+    "id": 4008,
+    "domain": 4,
+    "text": "A cloud security architect is designing network controls for a three-tier web application in AWS (Load Balancer → Web → App → Database). Security groups and NACLs are both available. What is the CORRECT understanding of their roles and the optimal control design?",
+    "options": [
+      "Security Groups and NACLs are redundant — implement only Security Groups since they are more feature-rich",
+      "Security Groups are stateful firewalls at the ENI level (instance-level); NACLs are stateless firewalls at the subnet level; optimal design: Security Groups provide fine-grained instance-level rules (allow Web SG to talk to App SG, App SG to Database SG); NACLs provide subnet-level guardrails and can be used for explicit deny rules (SGs cannot explicitly deny, only allow); layering both provides defense-in-depth — NACLs for broad subnet protection, Security Groups for precise instance-level control",
+      "NACLs are more secure than Security Groups because they are stateless — implement only NACLs for the database tier",
+      "Security Groups apply to VPCs; NACLs apply to subnets — they operate at different network layers and cannot both be applied to the same resource"
+    ],
+    "answer": 1,
+    "explanation": "AWS network controls: (1) Security Groups: stateful (return traffic allowed automatically), attached to ENIs, can reference other SGs (e.g., 'allow traffic from App-SG' without IP management), evaluate ALL rules before allowing; (2) NACLs: stateless (must explicitly allow return traffic), applied at subnet level, rule numbers determine evaluation order, first-match wins. Defense-in-depth use: SGs for precise allowed-traffic definitions, NACLs for explicit deny rules and subnet-level guardrails. SGs cannot DENY — they only allow. NACLs can DENY specific sources even if SG allows them.",
+    "weakness": "AWS security groups vs NACLs, cloud network security",
+    "references": ["https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html", "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html"]
+  },
+  {
+    "id": 4009,
+    "domain": 4,
+    "text": "A SOC analyst receives an alert indicating that a web server is sending HTTP POST requests to an external IP on port 80 — unusual for a server that normally only receives web traffic. The server hosts a publicly accessible contact form. What attack is MOST likely occurring and what evidence would confirm it?",
+    "options": [
+      "The server is generating normal outbound traffic for software updates — servers commonly initiate outbound connections",
+      "Server-Side Request Forgery (SSRF) or command injection via the contact form enabling outbound connections from the server; alternatively, the server may be compromised and used as a zombie in a botnet; confirm by: reviewing contact form logs for injection patterns, analyzing the content and destination of outbound POST requests, checking for web shells or unauthorized files, reviewing process trees for unexpected parent-child relationships, and examining the server for persistence mechanisms",
+      "A failed denial of service attack — the server is attempting to consume external server resources",
+      "A misconfigured monitoring agent — contact form processors sometimes send telemetry data to vendor servers"
+    ],
+    "answer": 1,
+    "explanation": "Servers that normally receive traffic but begin initiating outbound connections is a critical indicator of compromise. Possible scenarios: (1) SSRF via contact form — user input causes the server to make arbitrary outbound requests; (2) Web shell — attacker uploaded a PHP/JSP shell via the contact form and uses it for C2; (3) Command injection — input in the form is passed to OS commands. Investigation: (1) Contact form access logs for injection payloads; (2) File system changes (new .php files); (3) Process monitoring (web server spawning shells); (4) Network capture of outbound POST content; (5) Web application firewall logs.",
+    "weakness": "SSRF, web application compromise indicators, server outbound traffic",
+    "references": ["https://owasp.org/www-community/attacks/Server_Side_Request_Forgery", "https://attack.mitre.org/techniques/T1190/"]
+  },
+  {
+    "id": 4010,
+    "domain": 4,
+    "text": "A network engineer proposes using SNMPv2c for network device monitoring across a large enterprise. A security auditor objects. What is the PRIMARY security concern with SNMPv2c?",
+    "options": [
+      "SNMPv2c is too resource-intensive for large enterprise monitoring — use SNMPv1 for better performance",
+      "SNMPv2c uses community strings (essentially passwords) transmitted in cleartext, vulnerable to interception; community strings with write access allow attackers to reconfigure network devices; SNMPv2c has no authentication, encryption, or access control beyond the community string — SNMPv3 with authPriv security level provides user-based authentication (MD5/SHA) and encryption (AES) and should be used for all new deployments",
+      "SNMPv2c uses UDP which provides no reliability guarantees for monitoring data",
+      "SNMPv2c community strings are limited to 16 characters, making them trivially brute-forceable"
+    ],
+    "answer": 1,
+    "explanation": "SNMP security evolution: SNMPv1/v2c use community strings (typically 'public'/'private') transmitted in cleartext. An attacker capturing network traffic retrieves the community string and can: (1) Read all device configuration and status (read community); (2) Modify device configuration including routing tables, ACLs, disable interfaces (write community). SNMPv3 authPriv mode: authentication via HMAC-MD5 or HMAC-SHA, encryption via AES, user-based security model with per-user access controls. SNMPv3 is the only cryptographically secure SNMP version.",
+    "weakness": "SNMP security, SNMPv3, network device monitoring",
+    "references": ["https://www.rfc-editor.org/rfc/rfc3411", "https://csrc.nist.gov/pubs/sp/800/82/r3/final"]
+  },
+  {
+    "id": 4011,
+    "domain": 4,
+    "text": "A security architect is evaluating network segmentation for an organization's OT/IT integration project. The OT environment controls manufacturing equipment and must communicate status data to the IT business intelligence system. Which architecture BEST balances OT security with the business requirement for data access?",
+    "options": [
+      "Create a direct connection between IT and OT networks with a firewall — allow only necessary ports for data transfer",
+      "Implement a DMZ-based data diode architecture: OT data flows unidirectionally from OT → DMZ (historian server) → IT; the data diode hardware physically enforces one-way data flow (no return path from IT to OT); the historian in the DMZ aggregates OT data for IT consumption; this prevents any IT compromise from propagating into OT while enabling legitimate data sharing",
+      "Keep IT and OT completely air-gapped — transfer data manually via USB drives on a scheduled basis",
+      "Implement bi-directional VPN between IT and OT with strict firewall rules — VPN encryption compensates for the shared connectivity"
+    ],
+    "answer": 1,
+    "explanation": "OT/IT integration presents a critical security challenge: OT systems controlling physical processes cannot accept the same risk as IT systems. A data diode architecture provides: (1) Hardware-enforced unidirectional flow — physically impossible to send data from IT to OT; (2) DMZ historian — OT data is collected and made available to IT without IT having any network path to OT; (3) Zero attack surface into OT from IT — even a fully compromised IT environment cannot reach OT. Bi-directional connections (even with firewalls) can be misconfigured or exploited, and firewalls can fail open.",
+    "weakness": "OT/IT integration, data diode, unidirectional security gateways",
+    "references": ["https://www.cisa.gov/topics/industrial-control-systems", "https://www.nist.gov/pubs/sp/800/82/r3/final"]
+  },
+  {
+    "id": 4012,
+    "domain": 4,
+    "text": "During a red team exercise, the team successfully performs an ARP cache poisoning attack on a switched network segment and intercepts traffic between a workstation and the default gateway. The network uses 802.1X for port authentication. How was this possible and what additional control would prevent it?",
+    "options": [
+      "802.1X failure — the red team must have bypassed 802.1X authentication which should prevent ARP spoofing",
+      "802.1X authenticates devices to the network but does not prevent ARP-layer attacks after a device is authenticated; an authenticated device on the network can still send malicious ARP replies; Dynamic ARP Inspection (DAI) is the control that prevents ARP poisoning by validating ARP packets against a DHCP snooping binding table — only permitting ARP replies from legitimate IP-to-MAC mappings",
+      "The red team used a software-defined approach to bypass the switch ASIC — this cannot happen on modern hardware switches",
+      "ARP poisoning only works on hub networks — switched networks are immune because of MAC address table isolation"
+    ],
+    "answer": 1,
+    "explanation": "802.1X controls which devices join the network — it does not control what traffic an authenticated device sends, including malicious ARP. ARP operates at Layer 2 and is inherently trusting. Dynamic ARP Inspection (DAI) and DHCP Snooping work together: DHCP Snooping creates a binding table of legitimate IP-MAC-port mappings; DAI validates all ARP packets against this table — ARP replies claiming IP-MAC mappings not in the binding table are dropped. Additionally, static ARP entries for critical devices (default gateway) prevent ARP poisoning for those specific targets.",
+    "weakness": "ARP cache poisoning, Dynamic ARP Inspection, 802.1X limitations",
+    "references": ["https://www.cisco.com/c/en/us/td/docs/switches/lan/catalyst_iosxe/software/release/17_x/security_configuration_guide_17_x/m_dynamic_arp_inspection.html"]
+  },
+  {
+    "id": 4013,
+    "domain": 4,
+    "text": "A web application uses JWT (JSON Web Tokens) for authentication. A penetration tester modifies a JWT by changing the algorithm from RS256 (asymmetric RSA) to HS256 (symmetric HMAC) and signs it with the server's public key. The application accepts the forged token. What vulnerability does this demonstrate?",
+    "options": [
+      "Weak JWT secret — the server's private key is too short and can be derived from the public key",
+      "JWT Algorithm Confusion (CVE class): the application uses the 'alg' field from the token header to determine verification algorithm without pinning the expected algorithm; when the attacker changes alg to HS256 and signs with the public key (which is known/public), the server verifies the HMAC signature using the public key as the symmetric secret — succeeds because the public key is the shared secret for HMAC; fix: pin the expected algorithm server-side and never trust the alg field from the token",
+      "JWT signature bypass — the server does not verify JWT signatures at all",
+      "RSA key confusion — using RSA keys for HMAC creates valid signatures due to mathematical properties"
+    ],
+    "answer": 1,
+    "explanation": "JWT Algorithm Confusion (also called Algorithm Substitution): JWT header contains the 'alg' field. If the server uses this field to determine verification method: (1) Attacker changes alg from RS256 to HS256; (2) Attacker signs JWT with the PUBLIC key (which is known/public by design); (3) Server sees 'alg: HS256', uses public key as HMAC secret; (4) HMAC verification succeeds. Fix: the server must hardcode the expected algorithm and NEVER use the alg field from untrusted input. This is a well-documented JWT vulnerability (PortSwigger research).",
+    "weakness": "JWT algorithm confusion, authentication bypass, alg header manipulation",
+    "references": ["https://portswigger.net/web-security/jwt", "https://owasp.org/www-project-api-security/"]
+  },
+  {
+    "id": 4014,
+    "domain": 4,
+    "text": "An organization's perimeter firewall logs show a spike in outbound traffic to hundreds of different external IPs, each connection lasting less than 2 seconds, sending approximately 100 bytes. This pattern occurs for 10 minutes and then stops completely. What does this MOST likely represent?",
+    "options": [
+      "A distributed denial of service attack inbound — the organization's server is being probed by many attackers simultaneously",
+      "This pattern is consistent with a distributed port scan or network reconnaissance outbound from a compromised internal host: short-lived connections, small data transfers, many distinct external targets — the internal host may be compromised and performing outbound scanning for the threat actor (zombie scanner), or involved in distributed brute force attacks; isolate the source host immediately and conduct forensic analysis",
+      "Normal CDN traffic — content delivery networks routinely establish many short-lived connections to edge servers",
+      "An application making legitimate API calls to multiple microservices — modern applications communicate with many external services"
+    ],
+    "answer": 1,
+    "explanation": "The traffic pattern (many distinct IPs, short duration, small size, burst then stop) matches outbound scanning behavior from a compromised host. Attackers often use compromised systems as scan proxies to: (1) Obscure their origin; (2) Leverage the corporate IP's reputation; (3) Scan from inside firewalls that might block external scanners. 10-minute burst suggests an automated scan script. Investigation: identify the source host, check for malware, review all outbound connections from that host, determine what was scanned (port range, target subnets), and assess if data was exfiltrated in the 100-byte responses.",
+    "weakness": "Outbound scanning, compromised host indicators, network forensics",
+    "references": ["https://attack.mitre.org/tactics/TA0043/"]
+  },
+  {
+    "id": 4015,
+    "domain": 4,
+    "text": "A security engineer is implementing TLS for internal microservices communication. A developer proposes using self-signed certificates for all service-to-service communication to 'save money' on CA costs. What is the PRIMARY security concern with this approach at scale?",
+    "options": [
+      "Self-signed certificates cannot use TLS 1.3 — using them limits the organization to TLS 1.2",
+      "Self-signed certificates provide encryption but lack the trust anchor needed for automated certificate validation: (1) At scale, managing trust for thousands of self-signed certs becomes operationally unmanageable; (2) Rogue services can generate self-signed certificates that appear legitimate; (3) Certificate rotation automation breaks without a CA; (4) The correct solution is an internal PKI (Private CA using CFSSL, HashiCorp Vault, AWS Private CA, or Microsoft ADCS) — provides organizational trust anchor, automated issuance/rotation, and revocation capability",
+      "Self-signed certificates expire after only 30 days — the operational overhead is too high",
+      "Self-signed certificates use weaker key sizes by default — require 4096-bit keys for adequate security"
+    ],
+    "answer": 1,
+    "explanation": "Self-signed certificates for internal mTLS have scale and trust problems: (1) No revocation mechanism — if a service is compromised, you cannot revoke its certificate without removing it from every service's trust list; (2) Trust sprawl — each service must trust every other service's specific certificate; (3) No automated rotation at scale; (4) No audit trail of certificate issuance. An internal Private CA solves all these: issue certificates from a trusted internal root, automate rotation via ACME protocol, revoke via CRL/OCSP. HashiCorp Vault PKI secrets engine or AWS Private CA are common solutions.",
+    "weakness": "Internal PKI, mTLS, certificate management at scale",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final"]
+  },
+  {
+    "id": 4016,
+    "domain": 4,
+    "text": "A network security assessment reveals that a company's remote access VPN uses PPTP (Point-to-Point Tunneling Protocol). The security team recommends immediate replacement. Why is PPTP considered cryptographically broken?",
+    "options": [
+      "PPTP is too slow for modern high-bandwidth remote access requirements — performance is the primary concern",
+      "PPTP relies on MS-CHAPv2 for authentication which uses DES encryption and is completely broken: the MS-CHAPv2 challenge-response can be reduced to a single DES key brute force attack that can be completed in under 24 hours with cloud GPU resources; the encryption uses RC4 with known key recovery vulnerabilities; full PPTP sessions can be decrypted offline by a passive eavesdropper who captures the handshake — it provides a false sense of security",
+      "PPTP cannot operate through NAT and is incompatible with modern network infrastructure",
+      "PPTP was deprecated by Microsoft only because IPsec is faster — the cryptography is still acceptable for low-sensitivity data"
+    ],
+    "answer": 1,
+    "explanation": "MS-CHAPv2 (used in PPTP) was broken in 2012 (Moxie Marlinspike research): the 3DES key used in the challenge-response is reducible to a single DES key by design. The CloudCracker service demonstrated cracking PPTP sessions in under 24 hours for $200. Additionally, RC4 encryption (used after authentication) has stream cipher weaknesses. PPTP must be replaced immediately — recommended alternatives: OpenVPN (TLS/AES), WireGuard (ChaCha20/Poly1305), IPsec/IKEv2. This is not a performance issue — PPTP is cryptographically broken beyond practical use.",
+    "weakness": "PPTP vulnerabilities, MS-CHAPv2, VPN protocol security",
+    "references": ["https://www.rfc-editor.org/rfc/rfc8996", "https://csrc.nist.gov/pubs/sp/800/77/r1/final"]
+  },
+  {
+    "id": 4017,
+    "domain": 4,
+    "text": "During incident response, a forensic analyst discovers that an attacker used a technique called 'living off the land' (LOtL) for lateral movement. Which network-level detection approach is MOST effective for LOtL techniques?",
+    "options": [
+      "Signature-based IDS — LOtL techniques use known tools like PowerShell which have established signatures",
+      "Network behavior analytics (NBA) focusing on protocol anomalies and unusual authentication patterns: LOtL uses legitimate tools (PowerShell, WMI, RDP, SMB) making signature detection ineffective; behavioral detection looks for: unusual inter-workstation SMB (workstation to workstation instead of workstation to server), PowerShell remoting between non-administrative systems, anomalous LDAP queries, pass-the-hash authentication patterns, and RDP access to systems the user has never accessed — behavioral baselines are required",
+      "Deploy a honeypot network — LOtL techniques will trigger honeypot alerts when attackers access unmonitored systems",
+      "Implement application whitelisting on all endpoints — blocking unknown executables prevents LOtL technique execution"
+    ],
+    "answer": 1,
+    "explanation": "Living off the Land uses legitimate OS tools: PowerShell, WMI, WMIC, certutil, mshta, regsvr32, RDP, SMB, etc. Signature detection fails because these are legitimate tools. Network behavioral detection: (1) Lateral movement: SMB connections between workstations (unusual in typical environments); (2) Pass-the-hash: NTLM authentication from unexpected source IPs; (3) Credential dumping: unusual LSASS access patterns (Zerologon, DCSync patterns visible in network logs); (4) Service creation: DCE/RPC service installation traffic. Microsoft Defender for Identity (formerly ATA) and network detection and response (NDR) tools are designed for these patterns.",
+    "weakness": "Living off the land detection, behavioral analytics, lateral movement",
+    "references": ["https://attack.mitre.org/", "https://www.cisa.gov/sites/default/files/2024-03/joint-guidance-identifying-and-mitigating-living-off-the-land-techniques_508c.pdf"]
+  },
+  {
+    "id": 4018,
+    "domain": 4,
+    "text": "A network architect designs a Demilitarized Zone (DMZ) for web servers. The DMZ design places the firewall between the internet and the DMZ, but no additional firewall between the DMZ and the internal network — relying instead on the DMZ servers' host-based firewalls. What is the critical architectural flaw?",
+    "options": [
+      "Host-based firewalls on DMZ servers are sufficient — they provide equivalent protection to a dedicated network firewall",
+      "A DMZ requires two firewall boundaries: internet → Firewall 1 → DMZ → Firewall 2 → Internal Network; if a DMZ server is compromised, the host-based firewall is under attacker control and can be disabled; without a dedicated Firewall 2, a compromised DMZ server has direct network access to internal systems — the DMZ provides no protection for the internal network in this scenario",
+      "The only issue is management complexity — a dual-firewall architecture is harder to manage",
+      "Single firewall DMZ designs are acceptable if the DMZ servers are sufficiently hardened"
+    ],
+    "answer": 1,
+    "explanation": "DMZ security model requires defense-in-depth with two firewall boundaries: (1) Internet → Firewall 1 → DMZ: filters inbound traffic, allows only necessary services (80, 443); (2) DMZ → Firewall 2 → Internal: allows only specific data flows from DMZ to internal (e.g., DMZ can query internal database on port 1433, nothing else). If DMZ server is compromised: attacker controls host-based firewall → can disable it → has full network path to internal. A second dedicated firewall under different administrative control maintains protection even if the DMZ host is fully compromised.",
+    "weakness": "DMZ architecture, dual-firewall design, defense in depth",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/41/r1/final"]
+  },
+  {
+    "id": 4019,
+    "domain": 4,
+    "text": "A threat intelligence report indicates that attackers are actively using DNS rebinding attacks against organizations similar to yours. Your security team asks you to explain the attack mechanism and appropriate defenses. What is the correct explanation?",
+    "options": [
+      "DNS rebinding is a variant of ARP spoofing that targets DNS caches — it is mitigated by DNSSEC",
+      "DNS rebinding exploits browser same-origin policy: attacker registers a domain with a short TTL; browser makes initial request to attacker's server (legitimate IP); attacker changes DNS to point to an internal IP (192.168.x.x); subsequent requests from the browser's cached page go to internal network services using attacker's domain as origin; defenses: DNS rebinding protection in routers/resolvers (reject external domains resolving to RFC 1918 addresses), HTTP Host header validation in internal services, and private network access controls in browsers (Chrome Private Network Access)",
+      "DNS rebinding attacks are only possible on HTTP connections — HTTPS connections are immune",
+      "DNS rebinding requires the attacker to be on the same local network as the victim — it is not a remote attack"
+    ],
+    "answer": 1,
+    "explanation": "DNS Rebinding attack flow: (1) Victim visits attacker.com (TTL=1 second); (2) attacker.com initially resolves to attacker's external server; (3) Attacker changes DNS record to point to internal IP (e.g., 192.168.1.1); (4) Browser's cached page makes XHR request to attacker.com; (5) DNS re-resolves to internal IP; (6) Browser's same-origin policy sees same origin (attacker.com), allows the request; (7) Attacker's JavaScript now accesses internal services. Defenses: resolver-level: block external domains resolving to RFC 1918; service-level: validate Host header; browser-level: Chrome's Private Network Access spec.",
+    "weakness": "DNS rebinding attacks, same-origin policy, browser security",
+    "references": ["https://owasp.org/www-community/attacks/DNS_Rebinding"]
+  },
+  {
+    "id": 4020,
+    "domain": 4,
+    "text": "An organization implements email security with SPF, DKIM, and DMARC. Despite this, a red team successfully sends a spoofed email appearing to come from ceo@company.com to an employee using a domain 'company.com' (with a different Unicode character). What attack technique is being used and how should it be defended?",
+    "options": [
+      "The red team bypassed DMARC — DMARC should prevent all email spoofing from the organization's domain",
+      "This is an IDN (Internationalized Domain Name) homograph attack or lookalike domain attack: the 'company.com' domain uses a visually identical Unicode character (e.g., Cyrillic 'о' vs Latin 'o') creating a different domain that appears identical visually; SPF/DKIM/DMARC protect the legitimate company.com domain but cannot prevent registration of lookalike domains; defenses: register common lookalike domains proactively, implement email security that flags domains registered within last 30 days, train users to verify sender domains carefully, and monitor for domain squatting",
+      "DMARC is misconfigured — set to 'quarantine' policy instead of 'reject'",
+      "The attack exploits a vulnerability in the email client's font rendering — update email clients to latest version"
+    ],
+    "answer": 1,
+    "explanation": "IDN Homograph attacks exploit Unicode's visual similarity between characters. Punycode encoding makes these domains machine-distinguishable (xn-- prefix) but email clients display the visual Unicode representation. SPF/DKIM/DMARC protect company.com specifically — they cannot protect against completely different domains that look similar. Modern defenses: (1) Defensive domain registration (register common lookalikes in all TLDs); (2) Email security products with lookalike domain detection; (3) Browser/client punycode display (many browsers now show punycode for suspicious IDNs); (4) Security awareness training on domain verification.",
+    "weakness": "Homograph attacks, IDN domains, lookalike domain defense",
+    "references": ["https://owasp.org/www-community/attacks/Homograph_Attack"]
+  },
+  {
+    "id": 4021,
+    "domain": 4,
+    "text": "A content filter uses SSL/TLS inspection (SSL interception) to inspect encrypted web traffic. Employees report that their personal banking sessions are being intercepted. What ethical and technical concerns does this raise?",
+    "options": [
+      "There are no concerns — employees using corporate networks have no privacy expectations and TLS inspection is a standard security practice",
+      "SSL inspection raises significant concerns: (1) Legal — in many jurisdictions (Germany, France, some US states) interception of encrypted communications requires specific legal authority or employee consent; (2) Ethical — financial and healthcare communications carry strong privacy expectations; (3) Technical risks — the corporate CA can sign certificates for any domain including bank.com, creating MitM capability; (4) Best practice: exclude financial, healthcare, and personal communication domains from SSL inspection and provide clear employee disclosure of inspection scope",
+      "The concern is only technical — use certificate pinning in browsers to prevent SSL inspection",
+      "SSL inspection should be extended to all employee traffic including banking — complete visibility is necessary for effective security"
+    ],
+    "answer": 1,
+    "explanation": "SSL/TLS inspection creates a corporately-controlled Man-in-the-Middle position. Issues: (1) Legal: EU regulations (ePrivacy Directive, GDPR), Germany's works council requirements, and some US state wiretapping laws may require employee notice or consent; (2) Ethical: the corporate CA can impersonate any HTTPS site including banks, healthcare portals, attorneys — employees have privacy rights in some communications even on corporate networks; (3) Security risk: the corporate certificate storage becomes a high-value target; (4) Regulatory: healthcare workers accessing patient portals, attorneys accessing privileged systems. Policy must exclude sensitive domains and provide transparent disclosure.",
+    "weakness": "SSL inspection ethics, employee privacy, TLS interception policy",
+    "references": ["https://www.nist.gov/pubs/sp/800/52/r2/final"]
+  },
+  {
+    "id": 4022,
+    "domain": 4,
+    "text": "A penetration tester exploits an HTTP Request Smuggling vulnerability. They prepend a hidden HTTP request within the body of a forwarded request to the backend server. What makes this attack particularly dangerous in modern application architectures?",
+    "options": [
+      "HTTP Request Smuggling is only possible with HTTP/1.0 — modern applications using HTTP/2 are immune",
+      "HTTP Request Smuggling exploits discrepancies in how frontend (load balancer/proxy) and backend servers interpret HTTP request boundaries (Content-Length vs Transfer-Encoding: chunked headers); the attack bypasses security controls at the frontend (WAF, authentication middleware) by having the frontend see one request and the backend see an additional hidden request; impacts: bypass authentication, poison frontend caches, expose other users' requests, achieve internal SSRF, and bypass access controls — particularly dangerous in microservice architectures where the frontend enforces most security",
+      "HTTP Request Smuggling only affects GET requests — POST requests with bodies are immune",
+      "The attack requires the attacker to be on the same physical network as the target infrastructure"
+    ],
+    "answer": 1,
+    "explanation": "HTTP Request Smuggling (PortSwigger research) exploits Content-Length/Transfer-Encoding desynchronization: (1) Attacker sends a request the front-end processes as ONE request but the backend processes as TWO; (2) The 'smuggled' second request bypasses front-end security (WAF rules, authentication checks) because the frontend sees only one request; (3) In microservices with a security gateway, all security enforcement is at the gateway — smuggled requests reach backend services unauthenticated. Defenses: normalize HTTP requests at the proxy, use HTTP/2 end-to-end, disable ambiguous TE/CL header combinations.",
+    "weakness": "HTTP Request Smuggling, desync attacks, proxy security",
+    "references": ["https://portswigger.net/web-security/request-smuggling", "https://owasp.org/www-project-web-security-testing-guide/"]
+  },
+  {
+    "id": 4023,
+    "domain": 4,
+    "text": "A security team is configuring an IDS/IPS for a financial institution's trading network. The trading application generates 40Gbps of legitimate traffic with strict sub-millisecond latency requirements. An IPS in inline mode adds 2ms of latency. What is the BEST architecture decision?",
+    "options": [
+      "Deploy the IPS inline with all 40Gbps traffic — security must not be compromised for performance",
+      "Deploy the IDS in passive (tap/SPAN) mode for detection without adding latency, combined with network-based behavioral analytics; implement application-level controls within the trading system itself; use out-of-band automated response to isolate compromised systems when threats are detected — the 2ms IPS latency creates unacceptable business risk for high-frequency trading where microseconds determine competitive advantage and regulatory obligations",
+      "Disable the IDS/IPS entirely for trading networks — financial trading systems are isolated and not vulnerable to external attacks",
+      "Implement a 10Gbps traffic sample to the IPS, inspecting only 25% of traffic to maintain latency requirements"
+    ],
+    "answer": 1,
+    "explanation": "High-frequency trading latency requirements (sub-millisecond) are incompatible with inline IPS processing at 40Gbps. A 2ms latency could mean millions in lost competitive advantage per day. Security architecture must account for business requirements: (1) Passive mode IDS on a network tap/SPAN — zero added latency, full detection capability; (2) Out-of-band response automation — detect and isolate without inline processing; (3) Application-level controls within the trading system; (4) Market-specific security controls (circuit breakers, trading limits). This balances security requirements with legitimate business constraints.",
+    "weakness": "IDS vs IPS, latency-sensitive environments, security architecture trade-offs",
+    "references": ["https://www.nist.gov/pubs/sp/800/94/r1/final"]
+  },
+  {
+    "id": 4024,
+    "domain": 4,
+    "text": "A SOC analyst reviews logs showing a successful SQL injection attack against a web application database server. The attacker executed: xp_cmdshell 'powershell.exe -enc [base64 payload]'. What does this indicate about the attacker's success and why is this particularly critical?",
+    "options": [
+      "The attacker found a SQL injection vulnerability — this is a data breach limited to database contents",
+      "xp_cmdshell execution indicates the attacker achieved operating system command execution from SQL injection: (1) xp_cmdshell is a stored procedure that executes OS commands from the database context; (2) The SQL Server service account's OS privileges are now the attacker's effective privileges; (3) Base64-encoded PowerShell is a common obfuscation technique for dropping additional malware; (4) This is not just data breach — this is likely full server compromise with lateral movement capability; initiate full incident response immediately",
+      "The attack is limited to the database — xp_cmdshell only affects Microsoft SQL Server internals",
+      "xp_cmdshell is disabled by default in SQL Server — this attack could not have succeeded without configuration changes"
+    ],
+    "answer": 1,
+    "explanation": "xp_cmdshell execution represents SQL injection escalating to OS command injection. The SQL Server service account (often running with elevated privileges in legacy configurations) executes arbitrary OS commands. Base64-encoded PowerShell payload is classic malware staging: (1) Download and execute additional payloads; (2) Establish persistence mechanisms; (3) Enable lateral movement from the database server; (4) Potentially disable antivirus or security monitoring. This is a full system compromise, not just data access. MSSQL security: disable xp_cmdshell (off by default in SQL Server 2005+), use least privilege service accounts, implement SQL Server Audit.",
+    "weakness": "SQL Server xp_cmdshell, OS command injection, SQL injection severity",
+    "references": ["https://owasp.org/www-community/attacks/SQL_Injection", "https://attack.mitre.org/techniques/T1059/"]
+  },
+  {
+    "id": 4025,
+    "domain": 4,
+    "text": "A network architect proposes implementing IPv6 in a dual-stack configuration (IPv4 and IPv6 running simultaneously) on the corporate network. The security team raises concerns. What IPv6-specific security risk is MOST commonly overlooked in dual-stack environments?",
+    "options": [
+      "IPv6 is more secure than IPv4 by design — implementing it actually reduces network security risk",
+      "Security monitoring and controls designed for IPv4 often do not inspect IPv6 traffic: firewalls may block IPv4 SQL injection but pass IPv6 attacks; DLP systems may miss IPv6 data exfiltration; IDS signatures may not apply to IPv6 traffic; additionally, IPv6 features like SLAAC (Stateless Address Autoconfiguration) can be abused by rogue router advertisements to redirect traffic; Teredo, ISATAP, and 6to4 tunnels can create IPv6 connectivity bypassing security controls even without explicit IPv6 configuration",
+      "IPv6 requires twice the firewall rules of IPv4, doubling administrative overhead",
+      "IPv6 addresses are too long for humans to read, making IP-based access control lists impractical"
+    ],
+    "answer": 1,
+    "explanation": "Dual-stack networks create security blind spots: (1) Security tools (firewalls, IDS, DLP) may have robust IPv4 rules with no IPv6 equivalents — attackers use IPv6 to bypass IPv4-based controls; (2) SLAAC with rogue Router Advertisements can redirect traffic through attacker-controlled paths; (3) Automatic tunneling (Teredo, ISATAP) creates IPv6 connectivity even in IPv4-only policies; (4) IPv6 multicast (all-nodes ff02::1) used for reconnaissance; (5) IPv6 extension headers used for IDS evasion. Security policy must explicitly account for both protocol stacks.",
+    "weakness": "IPv6 security, dual-stack risks, rogue router advertisements",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/119/final"]
+  }
+]

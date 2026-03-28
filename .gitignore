@@ -22,3 +22,8 @@ __pycache__/
 .vscode/
 .idea/
 *.swp
+
+# bkit / PDCA tooling metadata (not app code)
+docs/.bkit-memory.json
+docs/.pdca-status.json
+docs/.pdca-snapshots/

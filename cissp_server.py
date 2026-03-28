@@ -19,12 +19,15 @@ from datetime import datetime, timedelta
 import pathlib
 
 PORT = 5432
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cissp_study.db")
-HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "CISSP_Study_App.html")
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cissp_config.json")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "cissp_study.db")
+HTML_PATH = os.path.join(BASE_DIR, "CISSP_Study_App.html")
+CONFIG_PATH = os.path.join(BASE_DIR, "cissp_config.json")
+QUESTIONS_DIR = os.path.join(BASE_DIR, "questions")
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 
 # ─── Config (API Key) ─────────────────────────────────────────────────────────
 
@@ -41,7 +44,30 @@ def save_config(config):
     with open(CONFIG_PATH, 'w') as f:
         json.dump(config, f, indent=2)
 
-# ─── Claude API ───────────────────────────────────────────────────────────────
+# ─── Question File Loading ────────────────────────────────────────────────────
+
+_question_cache = None
+
+def load_question_files():
+    """Load all domain question JSON files from questions/ directory."""
+    global _question_cache
+    if _question_cache is not None:
+        return _question_cache
+    questions = []
+    if os.path.isdir(QUESTIONS_DIR):
+        for fname in sorted(os.listdir(QUESTIONS_DIR)):
+            if fname.endswith(".json"):
+                try:
+                    with open(os.path.join(QUESTIONS_DIR, fname)) as f:
+                        data = json.load(f)
+                        if isinstance(data, list):
+                            questions.extend(data)
+                except Exception as e:
+                    print(f"  ⚠️  Could not load {fname}: {e}")
+    _question_cache = questions
+    return questions
+
+# ─── Multi-LLM API ───────────────────────────────────────────────────────────
 
 def call_claude(api_key, messages, system_prompt="", max_tokens=1500):
     """Call Claude API using only stdlib urllib — no pip dependencies needed."""
@@ -52,7 +78,6 @@ def call_claude(api_key, messages, system_prompt="", max_tokens=1500):
     }
     if system_prompt:
         payload["system"] = system_prompt
-
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         CLAUDE_API_URL,
@@ -64,8 +89,109 @@ def call_claude(api_key, messages, system_prompt="", max_tokens=1500):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=45) as resp:
-        return json.loads(resp.read())
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.loads(resp.read())["content"][0]["text"].strip()
+
+def call_gemini(api_key, messages, system_prompt="", model="gemini-1.5-flash", max_tokens=1500):
+    """Call Google Gemini API."""
+    contents = []
+    if system_prompt:
+        contents.append({"role": "user", "parts": [{"text": system_prompt}]})
+        contents.append({"role": "model", "parts": [{"text": "Understood."}]})
+    for m in messages:
+        role = "model" if m["role"] == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+    payload = {
+        "contents": contents,
+        "generationConfig": {"maxOutputTokens": max_tokens}
+    }
+    url = GEMINI_API_URL.format(model=model, key=api_key)
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data,
+        headers={"content-type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        result = json.loads(resp.read())
+        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+def call_ollama(base_url, model, messages, system_prompt="", max_tokens=1500):
+    """Call local Ollama API."""
+    all_messages = []
+    if system_prompt:
+        all_messages.append({"role": "system", "content": system_prompt})
+    all_messages.extend(messages)
+    payload = {"model": model, "messages": all_messages, "stream": False,
+               "options": {"num_predict": max_tokens}}
+    url = base_url.rstrip("/") + "/api/chat"
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data,
+        headers={"content-type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read())["message"]["content"].strip()
+
+def call_openai_compat(api_key, base_url, model, messages, system_prompt="", max_tokens=1500):
+    """Call OpenAI-compatible API (OpenAI, MiniMax, Qwen/DashScope)."""
+    all_messages = []
+    if system_prompt:
+        all_messages.append({"role": "system", "content": system_prompt})
+    all_messages.extend(messages)
+    payload = {"model": model, "messages": all_messages, "max_tokens": max_tokens}
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(base_url.rstrip("/") + "/chat/completions",
+        data=data,
+        headers={"Authorization": f"Bearer {api_key}", "content-type": "application/json"},
+        method="POST")
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+
+def call_llm(messages, system_prompt="", max_tokens=1500):
+    """Route to the configured LLM provider. Returns (text, error)."""
+    config = load_config()
+    provider = config.get("provider", "claude")
+    providers = config.get("providers", {})
+    pc = providers.get(provider, {})
+
+    try:
+        if provider == "claude":
+            api_key = pc.get("apiKey") or config.get("apiKey", "")
+            if not api_key:
+                return None, "No Claude API key configured. Add it in Settings."
+            text = call_claude(api_key, messages, system_prompt, max_tokens)
+        elif provider == "gemini":
+            api_key = pc.get("apiKey", "")
+            if not api_key:
+                return None, "No Gemini API key configured."
+            model = pc.get("model", "gemini-1.5-flash")
+            text = call_gemini(api_key, messages, system_prompt, model, max_tokens)
+        elif provider == "ollama":
+            base_url = pc.get("baseUrl", "http://localhost:11434")
+            model = pc.get("model", "llama3")
+            text = call_ollama(base_url, model, messages, system_prompt, max_tokens)
+        elif provider == "openai":
+            api_key = pc.get("apiKey", "")
+            if not api_key:
+                return None, "No OpenAI API key configured."
+            model = pc.get("model", "gpt-4o-mini")
+            text = call_openai_compat(api_key, "https://api.openai.com/v1", model, messages, system_prompt, max_tokens)
+        elif provider == "minimax":
+            api_key = pc.get("apiKey", "")
+            if not api_key:
+                return None, "No MiniMax API key configured."
+            model = pc.get("model", "abab6.5s-chat")
+            text = call_openai_compat(api_key, "https://api.minimax.chat/v1", model, messages, system_prompt, max_tokens)
+        elif provider == "qwen":
+            api_key = pc.get("apiKey", "")
+            if not api_key:
+                return None, "No Qwen API key configured."
+            model = pc.get("model", "qwen-turbo")
+            text = call_openai_compat(api_key, "https://dashscope.aliyuncs.com/compatible-mode/v1", model, messages, system_prompt, max_tokens)
+        else:
+            return None, f"Unknown provider: {provider}"
+        return text, None
+    except urllib.error.HTTPError as e:
+        body_err = e.read().decode()[:300]
+        return None, f"API error {e.code}: {body_err}"
+    except Exception as e:
+        return None, str(e)
 
 # ─── Database Setup ──────────────────────────────────────────────────────────
 
@@ -120,6 +246,22 @@ def init_db():
             response    TEXT NOT NULL,
             created_at  TEXT NOT NULL,
             PRIMARY KEY (q_id, is_correct)
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS mock_exams (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at      TEXT NOT NULL,
+            completed_at    TEXT,
+            duration_limit  INTEGER DEFAULT 240,
+            question_ids    TEXT NOT NULL,
+            answers         TEXT DEFAULT '{}',
+            domain_results  TEXT DEFAULT '{}',
+            total_questions INTEGER DEFAULT 0,
+            correct_count   INTEGER DEFAULT 0,
+            score           REAL,
+            status          TEXT DEFAULT 'in_progress'
         )
     """)
 
@@ -318,12 +460,49 @@ def set_claude_cache(q_id, is_correct, response_dict):
 
 # ─── Claude Handlers ──────────────────────────────────────────────────────────
 
-def handle_claude_explain(body):
-    config = load_config()
-    api_key = config.get("apiKey", "")
-    if not api_key:
-        return {"error": "No API key configured. Add your Claude API key in Settings."}, 400
+def _parse_llm_json(text):
+    """Strip markdown code fences and parse JSON from LLM output.
+    Tries multiple strategies to handle varied LLM output formats."""
+    import re
+    text = text.strip()
 
+    # Strategy 1: Strip ALL forms of code fences using regex
+    # Handles: ```json {...}```, ```json\n{...}\n```, ```{...}```, json {...}
+    fence_stripped = re.sub(r'^```[a-zA-Z]*\s*', '', text)   # remove opening fence + lang tag
+    fence_stripped = re.sub(r'\s*```$', '', fence_stripped)    # remove closing fence
+    fence_stripped = fence_stripped.strip()
+
+    # Strategy 2: Direct parse of fence-stripped text
+    try:
+        return json.loads(fence_stripped)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Strategy 3: Direct parse of original text (in case it was already clean JSON)
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Strategy 4: Extract first {...} JSON object via greedy regex (handles preamble/postamble text)
+    match = re.search(r'\{[\s\S]*\}', fence_stripped or text)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Strategy 5: Extract first [...] JSON array via regex
+    match = re.search(r'\[[\s\S]*\]', fence_stripped or text)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    raise ValueError(f"Could not parse JSON. Preview: {text[:300]}")
+
+def handle_claude_explain(body):
     q_id = body.get("qId")
     question = body.get("question", "")
     options = body.get("options", [])
@@ -333,11 +512,11 @@ def handle_claude_explain(body):
     domain = body.get("domain", "")
     existing_explanation = body.get("existingExplanation", "")
 
-    # Check SQLite cache first — avoids an API call if already answered before
+    # Check SQLite cache first
     if q_id is not None:
         cached = get_claude_cache(q_id, is_correct)
         if cached:
-            cached["_cached"] = True   # flag so the UI can show a cache indicator
+            cached["_cached"] = True
             return cached, 200
 
     system_prompt = (
@@ -357,18 +536,10 @@ Answer choices:
 {options_text}
 
 The student selected the CORRECT answer: {correct_answer}
-
 Study guide explanation: {existing_explanation}
 
-The student got this right. Now give them a deeper understanding:
-1. WHY THIS IS CORRECT: The precise CISSP principle or framework concept that makes this the right answer
-2. WHY THE OTHERS ARE WRONG: In a single paragraph, explain the misconception or trap behind each wrong option
-3. STUDY FOCUS: The key CISSP concepts, standards (NIST SP, ISO, (ISC)²), or frameworks that this question tests — to reinforce mastery
-4. MEMORY TIP: One memorable phrase or analogy to lock this in for exam day
-
-IMPORTANT: All four values must be plain strings — no arrays, no nested objects.
-Format as JSON: {{"whyCorrect": "...", "whyWrong": "...", "studyFocus": "...", "memoryTip": "..."}}
-Return ONLY valid JSON, no markdown code blocks."""
+Give them a deeper understanding. Return ONLY this JSON (all values must be plain strings):
+{{"whyCorrect": "...", "whyWrong": "...", "studyFocus": "...", "memoryTip": "..."}}"""
     else:
         user_message = f"""CISSP Question from Domain: {domain}
 
@@ -379,131 +550,83 @@ Answer choices:
 
 The student selected: {user_answer}
 Correct answer: {correct_answer}
-
 Study guide explanation: {existing_explanation}
 
-Please provide:
-1. WHY WRONG: The specific misconception that led to the wrong answer
-2. WHY CORRECT: The precise CISSP concept or principle that makes the correct answer right
-3. STUDY FOCUS: Specific CISSP concepts, standards (NIST SP, ISO, (ISC)²), or frameworks to review
-4. MEMORY TIP: One memorable phrase or analogy to remember this for the exam
+Return ONLY this JSON (all values must be plain strings):
+{{"whyWrong": "...", "whyCorrect": "...", "studyFocus": "...", "memoryTip": "..."}}"""
 
-Format as JSON with keys: "whyWrong", "whyCorrect", "studyFocus", "memoryTip"
-Return ONLY valid JSON, no markdown code blocks."""
+    text, error = call_llm([{"role": "user", "content": user_message}], system_prompt, max_tokens=900)
+    if error:
+        return {"error": error}, 502
 
     try:
-        resp = call_claude(api_key, [{"role": "user", "content": user_message}], system_prompt, max_tokens=900)
-        text = resp["content"][0]["text"].strip()
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError:
-            parsed = {"whyCorrect": text, "whyWrong": "", "studyFocus": "", "memoryTip": ""} if is_correct \
-                else {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}
+        parsed = _parse_llm_json(text)
+    except Exception:
+        parsed = {"whyCorrect": text, "whyWrong": "", "studyFocus": "", "memoryTip": ""} if is_correct \
+            else {"whyWrong": text, "whyCorrect": "", "studyFocus": "", "memoryTip": ""}
 
-        # Persist to SQLite so future requests for same question skip the API
-        if q_id is not None:
-            set_claude_cache(q_id, is_correct, parsed)
+    if q_id is not None:
+        set_claude_cache(q_id, is_correct, parsed)
 
-        return parsed, 200
-    except urllib.error.HTTPError as e:
-        body_err = e.read().decode()
-        return {"error": f"Claude API error: {e.code} — {body_err}"}, 502
-    except Exception as e:
-        return {"error": str(e)}, 500
+    return parsed, 200
 
 
 def handle_claude_generate_questions(body):
-    config = load_config()
-    api_key = config.get("apiKey", "")
-    if not api_key:
-        return {"error": "No API key configured."}, 400
-
     domain_id = body.get("domain", 1)
     domain_name = body.get("domainName", "")
-    count = min(int(body.get("count", 5)), 10)  # cap at 10 per call
+    count = min(int(body.get("count", 5)), 10)
     existing_ids = body.get("existingIds", [])
     max_existing_id = max(existing_ids) if existing_ids else 100
 
     system_prompt = (
         "You are a CISSP exam question writer with expertise in all 8 CISSP domains. "
-        "Generate realistic, exam-quality multiple-choice questions that test deep understanding, "
-        "not just memorization. Questions should reflect the scenario-based style of the actual CISSP exam. "
+        "Generate realistic, exam-quality multiple-choice questions that test deep understanding. "
         "Return ONLY valid JSON — no markdown, no explanation outside the JSON."
     )
 
-    user_message = f"""Generate {count} CISSP exam-quality multiple-choice questions for:
-Domain {domain_id}: {domain_name}
+    user_message = f"""Generate {count} CISSP scenario-based questions for Domain {domain_id}: {domain_name}.
 
-Requirements:
-- Each question must have exactly 4 answer choices (A, B, C, D)
-- Questions should be scenario-based and test application of knowledge
-- Vary difficulty: mix conceptual and scenario-based questions
-- Cover different subtopics within the domain
-- Include common misconceptions as wrong choices
-
-Return a JSON array of objects with this EXACT schema:
+Return a JSON array:
 [
   {{
     "id": {max_existing_id + 1},
     "domain": {domain_id},
-    "text": "The full question text",
-    "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+    "text": "question text",
+    "options": ["A text", "B text", "C text", "D text"],
     "answer": 0,
-    "explanation": "Detailed explanation of why the correct answer is right and others are wrong",
-    "weakness": "The common knowledge gap or misconception this question targets",
-    "refs": [{{"text": "Reference name", "url": "https://csrc.nist.gov or other authoritative URL"}}]
+    "explanation": "why correct and why others are wrong",
+    "weakness": "knowledge gap this tests"
   }}
 ]
+Use sequential IDs from {max_existing_id + 1}. Return ONLY the JSON array."""
 
-Use sequential IDs starting from {max_existing_id + 1}.
-Return ONLY the JSON array."""
+    text, error = call_llm([{"role": "user", "content": user_message}], system_prompt, max_tokens=2500)
+    if error:
+        return {"error": error}, 502
 
     try:
-        resp = call_claude(api_key, [{"role": "user", "content": user_message}], system_prompt, max_tokens=2500)
-        text = resp["content"][0]["text"].strip()
-        # Strip markdown code fences if present
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        try:
-            questions = json.loads(text)
-            if not isinstance(questions, list):
-                questions = [questions]
-            return {"questions": questions}, 200
-        except json.JSONDecodeError as e:
-            return {"error": f"Failed to parse generated questions: {str(e)}", "raw": text[:500]}, 500
-    except urllib.error.HTTPError as e:
-        body_err = e.read().decode()
-        return {"error": f"Claude API error: {e.code} — {body_err}"}, 502
+        questions = _parse_llm_json(text)
+        if not isinstance(questions, list):
+            questions = [questions]
+        return {"questions": questions}, 200
     except Exception as e:
-        return {"error": str(e)}, 500
+        return {"error": f"Failed to parse questions: {str(e)}", "raw": text[:500]}, 500
 
 
 def handle_claude_study_plan(body):
-    config = load_config()
-    api_key = config.get("apiKey", "")
-    if not api_key:
-        return {"error": "No API key configured."}, 400
-
     domain_stats = body.get("domainStats", {})
     target_date = body.get("targetDate", "")
     domain_names = {
-        "1": "Security & Risk Management",
-        "2": "Asset Security",
-        "3": "Security Architecture & Engineering",
-        "4": "Communication & Network Security",
-        "5": "Identity & Access Management (IAM)",
-        "6": "Security Assessment & Testing",
-        "7": "Security Operations",
-        "8": "Software Development Security"
+        "1": "Security & Risk Management", "2": "Asset Security",
+        "3": "Security Architecture & Engineering", "4": "Communication & Network Security",
+        "5": "Identity & Access Management (IAM)", "6": "Security Assessment & Testing",
+        "7": "Security Operations", "8": "Software Development Security"
     }
     domain_weights = {
         "1": "16%", "2": "10%", "3": "13%", "4": "13%",
         "5": "13%", "6": "12%", "7": "13%", "8": "10%"
     }
 
-    # Build performance summary
     perf_lines = []
     for did, stats in domain_stats.items():
         answered = stats.get("answered", 0)
@@ -512,64 +635,195 @@ def handle_claude_study_plan(body):
         name = domain_names.get(did, f"Domain {did}")
         weight = domain_weights.get(did, "?")
         if pct is not None:
-            perf_lines.append(f"  Domain {did} ({name}, {weight} of exam): {pct}% accuracy ({correct}/{answered} questions)")
+            perf_lines.append(f"  D{did} ({name}, {weight}): {pct}% ({correct}/{answered})")
         else:
-            perf_lines.append(f"  Domain {did} ({name}, {weight} of exam): Not yet practiced")
+            perf_lines.append(f"  D{did} ({name}, {weight}): Not practiced")
 
     system_prompt = (
         "You are a CISSP exam coach specializing in personalized study planning. "
-        "Create practical, actionable study plans based on the student's current performance data. "
-        "Focus on high-impact areas first — domains with low accuracy AND high exam weight. "
-        "The passing score is 700/1000 (approximately 70% scaled). Target 75%+ per domain."
+        "Create practical, actionable study plans based on student performance data. "
+        "The passing score is 700/1000. Target 75%+ per domain. "
+        "CRITICAL: Respond with ONLY a raw JSON object. "
+        "Do NOT use markdown code fences (no ```). Do NOT add any text before or after the JSON."
     )
 
-    target_info = f"Target exam date: {target_date}" if target_date else "No specific exam date set"
+    target_info = f"Target exam date: {target_date}" if target_date else "No specific exam date"
 
-    user_message = f"""Create a personalized CISSP study plan based on this student's performance:
-
+    user_message = f"""CISSP student performance:
 {chr(10).join(perf_lines)}
-
 {target_info}
-CISSP passing score: 700/1000 (approximately 70% scaled, targeting 75%+ per domain)
 
-Create a structured study plan with:
-1. Overall assessment (2-3 sentences on current readiness)
-2. Priority domains to study (ranked by urgency: low accuracy + high exam weight = highest priority)
-3. Weekly schedule (specific daily focus areas)
-4. Practice recommendations (what types of questions to focus on)
-5. Exam-day readiness checklist
-
-Return as JSON with keys:
+Respond with ONLY this raw JSON (no code fences, no extra text):
 {{
-  "readinessAssessment": "2-3 sentence overall assessment",
-  "priorityOrder": ["Domain X: reason", ...],
-  "weeklyPlan": [
-    {{"week": 1, "focus": "Domain X & Y", "dailyGoal": "20 questions/day", "topics": ["topic1", "topic2"]}},
-    ...
-  ],
-  "practiceRecommendations": ["recommendation 1", ...],
-  "examReadinessChecklist": ["item 1", ...]
-}}
+  "readinessAssessment": "2-3 sentence assessment of readiness",
+  "priorityOrder": ["Domain X: reason for priority"],
+  "weeklyPlan": [{{"week": 1, "focus": "topic", "dailyGoal": "daily target", "topics": ["topic1", "topic2"]}}],
+  "practiceRecommendations": ["recommendation 1"],
+  "examReadinessChecklist": ["checklist item 1"]
+}}"""
 
-Return ONLY valid JSON."""
+    text, error = call_llm([{"role": "user", "content": user_message}], system_prompt, max_tokens=2500)
+    if error:
+        return {"error": error}, 502
 
     try:
-        resp = call_claude(api_key, [{"role": "user", "content": user_message}], system_prompt, max_tokens=2000)
-        text = resp["content"][0]["text"].strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
+        return _parse_llm_json(text), 200
+    except Exception:
+        # Last resort: try brute-force regex extraction directly on the raw LLM output
+        import re
+        match = re.search(r'\{[\s\S]*\}', text)
+        if match:
+            try:
+                return json.loads(match.group(0)), 200
+            except Exception:
+                pass
+        # Truly unrecoverable — return error so the UI shows a helpful message
+        return {"error": f"AI returned an unreadable response. Please try again. (Parse failed on: {text[:120]}...)"},  502
+
+
+# ─── Mock Exam ────────────────────────────────────────────────────────────────
+
+def start_mock_exam(body):
+    """Start a new mock exam session with 125 questions sampled across domains."""
+    import random
+    all_questions = load_question_files()
+    num_questions = int(body.get("numQuestions", 125))
+    duration = int(body.get("durationMinutes", 240))
+
+    if not all_questions:
+        return {"error": "No question files found. Ensure questions/ directory exists."}, 400
+
+    # Group by domain for balanced sampling
+    by_domain = {}
+    for q in all_questions:
+        d = str(q.get("domain", 1))
+        by_domain.setdefault(d, []).append(q["id"])
+
+    # Weight sampling by exam domain weights
+    weights = {"1":16,"2":10,"3":13,"4":13,"5":13,"6":12,"7":13,"8":10}
+    selected_ids = []
+    total_weight = sum(weights.values())
+    for did, w in weights.items():
+        pool = by_domain.get(did, [])
+        if pool:
+            n = max(1, round(num_questions * w / total_weight))
+            selected_ids.extend(random.sample(pool, min(n, len(pool))))
+
+    # Top up to target if needed
+    random.shuffle(selected_ids)
+    selected_ids = selected_ids[:num_questions]
+
+    now = datetime.now().isoformat()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO mock_exams (started_at, duration_limit, question_ids, total_questions, status)
+        VALUES (?, ?, ?, ?, 'in_progress')
+    """, (now, duration, json.dumps(selected_ids), len(selected_ids)))
+    exam_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+
+    return {"examId": exam_id, "questionIds": selected_ids,
+            "totalQuestions": len(selected_ids), "durationMinutes": duration}, 200
+
+
+def submit_mock_exam(body):
+    """Submit final answers for a mock exam and compute results."""
+    exam_id = body.get("examId")
+    answers = body.get("answers", {})  # {q_id: selected_idx}
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM mock_exams WHERE id=?", (exam_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return {"error": "Exam not found"}, 404
+    if row["status"] != "in_progress":
+        conn.close()
+        return {"error": "Exam already completed"}, 400
+
+    # Load questions to check answers
+    all_questions = load_question_files()
+    q_map = {str(q["id"]): q for q in all_questions}
+    question_ids = json.loads(row["question_ids"])
+
+    correct_count = 0
+    domain_results = {}
+    answer_details = {}
+
+    for qid in question_ids:
+        q = q_map.get(str(qid))
+        if not q:
+            continue
+        did = str(q.get("domain", 1))
+        selected = answers.get(str(qid))
+        is_correct = selected is not None and int(selected) == int(q["answer"])
+        if is_correct:
+            correct_count += 1
+        domain_results.setdefault(did, {"answered": 0, "correct": 0})
+        domain_results[did]["answered"] += 1
+        if is_correct:
+            domain_results[did]["correct"] += 1
+        answer_details[str(qid)] = {
+            "selected": selected,
+            "correct": q["answer"],
+            "isCorrect": is_correct
+        }
+
+    total = len(question_ids)
+    score = round(correct_count / total * 100, 1) if total > 0 else 0
+    now = datetime.now().isoformat()
+
+    cur.execute("""
+        UPDATE mock_exams SET
+            completed_at=?, answers=?, domain_results=?,
+            correct_count=?, score=?, status='completed'
+        WHERE id=?
+    """, (now, json.dumps(answer_details), json.dumps(domain_results),
+          correct_count, score, exam_id))
+    conn.commit()
+    conn.close()
+
+    return {
+        "examId": exam_id,
+        "score": score,
+        "correctCount": correct_count,
+        "totalQuestions": total,
+        "domainResults": domain_results,
+        "answerDetails": answer_details,
+        "passed": score >= 70
+    }, 200
+
+
+def get_mock_exam_history():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, started_at, completed_at, total_questions, correct_count, score, status, duration_limit
+        FROM mock_exams ORDER BY id DESC LIMIT 5
+    """)
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return {"exams": rows}, 200
+
+
+def get_mock_exam_detail(exam_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM mock_exams WHERE id=?", (exam_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return {"error": "Not found"}, 404
+    d = dict(row)
+    for field in ("question_ids", "answers", "domain_results"):
         try:
-            plan = json.loads(text)
-            return plan, 200
-        except json.JSONDecodeError:
-            return {"readinessAssessment": text, "priorityOrder": [], "weeklyPlan": [], "practiceRecommendations": [], "examReadinessChecklist": []}, 200
-    except urllib.error.HTTPError as e:
-        body_err = e.read().decode()
-        return {"error": f"Claude API error: {e.code} — {body_err}"}, 502
-    except Exception as e:
-        return {"error": str(e)}, 500
+            d[field] = json.loads(d[field] or "null")
+        except Exception:
+            pass
+    return d, 200
 
 # ─── HTTP Handler ─────────────────────────────────────────────────────────────
 
@@ -626,10 +880,40 @@ class Handler(BaseHTTPRequestHandler):
             domain_id = int(qs["domain"][0]) if "domain" in qs else None
             self.send_json(get_history(domain_id))
         elif path == "/api/ping":
-            self.send_json({"ok": True, "db": DB_PATH, "version": "3.0"})
+            qs_count = len(load_question_files())
+            self.send_json({"ok": True, "db": DB_PATH, "version": "4.0",
+                           "questionBankSize": qs_count})
         elif path == "/api/config":
             config = load_config()
-            self.send_json({"hasApiKey": bool(config.get("apiKey", ""))})
+            provider = config.get("provider", "claude")
+            providers = config.get("providers", {})
+            # Return which providers have keys configured (not the keys themselves)
+            configured = {}
+            for p, pc in providers.items():
+                has_key = bool(pc.get("apiKey") or pc.get("baseUrl"))
+                configured[p] = has_key
+            # Legacy: claude key at root level
+            if config.get("apiKey"):
+                configured["claude"] = True
+            self.send_json({"hasApiKey": bool(config.get("apiKey", "") or
+                           (providers.get("claude", {}).get("apiKey"))),
+                           "provider": provider, "configuredProviders": configured})
+        elif path == "/api/questions":
+            domain_filter = int(qs["domain"][0]) if "domain" in qs else None
+            questions = load_question_files()
+            if domain_filter:
+                questions = [q for q in questions if q.get("domain") == domain_filter]
+            self.send_json({"questions": questions, "total": len(questions)})
+        elif path == "/api/mock-exam/history":
+            result, status = get_mock_exam_history()
+            self.send_json(result, status)
+        elif path.startswith("/api/mock-exam/") and path.count("/") == 3:
+            try:
+                exam_id = int(path.split("/")[-1])
+                result, status = get_mock_exam_detail(exam_id)
+                self.send_json(result, status)
+            except ValueError:
+                self.send_json({"error": "Invalid exam ID"}, 400)
         else:
             self.send_json({"error": "Not found"}, 404)
 
@@ -665,14 +949,34 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(result)
 
         elif path == "/api/config":
-            api_key = body.get("apiKey", "").strip()
-            if not api_key.startswith("sk-ant-"):
-                self.send_json({"error": "Invalid API key format. Key must start with 'sk-ant-'"}, 400)
-                return
             config = load_config()
-            config["apiKey"] = api_key
+            # Support both legacy {"apiKey": ...} and new {"provider": ..., "providers": {...}}
+            if "apiKey" in body:
+                api_key = body.get("apiKey", "").strip()
+                if not api_key.startswith("sk-ant-"):
+                    self.send_json({"error": "Invalid API key format. Must start with 'sk-ant-'"}, 400)
+                    return
+                config["apiKey"] = api_key
+                config.setdefault("provider", "claude")
+                config.setdefault("providers", {})
+                config["providers"]["claude"] = {"apiKey": api_key}
+            if "provider" in body:
+                config["provider"] = body["provider"]
+            if "providerConfig" in body:
+                # {"provider": "gemini", "config": {"apiKey": "...", "model": "..."}}
+                pc = body["providerConfig"]
+                pname = body.get("provider", config.get("provider", "claude"))
+                config.setdefault("providers", {})[pname] = pc
             save_config(config)
             self.send_json({"ok": True})
+
+        elif path == "/api/mock-exam/start":
+            result, status = start_mock_exam(body)
+            self.send_json(result, status)
+
+        elif path == "/api/mock-exam/submit":
+            result, status = submit_mock_exam(body)
+            self.send_json(result, status)
 
         elif path == "/api/claude/explain":
             result, status = handle_claude_explain(body)
@@ -701,14 +1005,19 @@ if __name__ == "__main__":
     print("  🛡️  CISSP Study App — Local Server")
     print("="*55)
     init_db()
+    q_count = len(load_question_files())
     print(f"  🌐 Server: http://localhost:{PORT}")
-    print(f"  📂 Folder: {os.path.dirname(os.path.abspath(__file__))}")
+    print(f"  📂 Folder: {BASE_DIR}")
     print(f"  💾 Database: cissp_study.db")
+    print(f"  📝 Question bank: {q_count} advanced questions loaded")
     config = load_config()
-    if config.get("apiKey"):
-        print(f"  🤖 Claude AI: Configured ✅")
+    provider = config.get("provider", "claude")
+    has_key = bool(config.get("apiKey") or config.get("providers", {}).get(provider, {}).get("apiKey") or
+                   config.get("providers", {}).get(provider, {}).get("baseUrl"))
+    if has_key:
+        print(f"  🤖 AI Provider: {provider} ✅")
     else:
-        print(f"  🤖 Claude AI: Not configured (add key in Settings)")
+        print(f"  🤖 AI Provider: not configured (add key in Settings)")
     print(f"\n  Open http://localhost:{PORT} in your browser.")
     print("  Press Ctrl+C to stop.\n")
 

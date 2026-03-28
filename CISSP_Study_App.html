@@ -221,16 +221,60 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
 .claude-loading { display: flex; align-items: center; gap: 10px; padding: 14px; color: #7c3aed; font-size: 0.87rem; }
 .claude-loading::before { content: ''; width: 18px; height: 18px; border: 2px solid #c4b5fd; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.plan-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 20px; margin-top: 16px; }
-.plan-card h4 { color: #0369a1; margin-bottom: 14px; font-size: 0.95rem; }
-.plan-week { border: 1px solid #e0f2fe; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
-.plan-week .week-label { font-weight: 700; font-size: 0.83rem; color: #0369a1; margin-bottom: 4px; }
-.plan-week .week-focus { font-size: 0.87rem; color: #374151; }
+.plan-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 22px; margin-top: 16px; }
+.plan-card h4 { color: #0369a1; margin: 0 0 10px; font-size: 0.96rem; display: flex; align-items: center; gap: 6px; }
+.plan-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #e0f2fe; }
+.plan-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.plan-list { margin: 6px 0 0 18px; font-size: 0.86rem; line-height: 1.85; color: #1e3a5f; }
+.plan-list li { margin-bottom: 2px; }
+.plan-list.checklist { list-style: none; margin-left: 0; }
+.plan-list.checklist li { padding: 4px 0; }
+.plan-week { border: 1px solid #bae6fd; border-radius: 9px; padding: 13px 15px; margin-bottom: 10px; background: #fff; box-shadow: 0 1px 3px rgba(14,100,148,0.06); }
+.plan-week .week-label { font-weight: 700; font-size: 0.88rem; color: #0369a1; margin-bottom: 5px; }
+.plan-week .week-goal { font-size: 0.84rem; color: #374151; margin-bottom: 8px; font-style: italic; }
+.week-topics { margin: 4px 0 0 16px; font-size: 0.83rem; color: #374151; line-height: 1.75; }
+.week-topics li { margin-bottom: 1px; }
 .api-key-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.88rem; font-family: monospace; background: #f9fafb; }
 .api-key-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px #ede9fe; }
 .claude-status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
 .claude-status-badge.connected { background: #e0f2e9; color: var(--primary-dark); }
 .claude-status-badge.disconnected { background: #fef3c7; color: #92400e; }
+
+/* MOCK EXAM STYLES */
+.exam-timer { font-size: 2rem; font-weight: 900; color: var(--primary); font-variant-numeric: tabular-nums; letter-spacing: 2px; }
+.exam-timer.warning { color: var(--accent); }
+.exam-timer.critical { color: var(--danger); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.exam-header { display: flex; justify-content: space-between; align-items: center; background: var(--card); border-radius: 12px; padding: 16px 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.exam-progress-wrap { flex: 1; margin: 0 24px; }
+.exam-progress-bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+.exam-progress-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+.exam-question-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.exam-q-dot { width: 32px; height: 32px; border-radius: 6px; border: 2px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+.exam-q-dot.answered { background: var(--primary); color: #fff; border-color: var(--primary); }
+.exam-q-dot.flagged { background: #fff3e0; border-color: var(--accent); color: #b45309; }
+.exam-q-dot.current { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+.exam-q-dot.correct { background: var(--success); color: #fff; border-color: var(--success); }
+.exam-q-dot.wrong { background: var(--danger); color: #fff; border-color: var(--danger); }
+.exam-history-card { background: var(--card); border-radius: 10px; padding: 16px 20px; border-left: 4px solid var(--primary); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.exam-history-card.pass { border-left-color: var(--success); }
+.exam-history-card.fail { border-left-color: var(--danger); }
+.exam-score-big { font-size: 3.5rem; font-weight: 900; }
+.exam-score-big.pass { color: var(--success); }
+.exam-score-big.fail { color: var(--danger); }
+.exam-pass-badge { display: inline-block; padding: 5px 16px; border-radius: 20px; font-size: 0.88rem; font-weight: 700; }
+.exam-pass-badge.pass { background: #e8f5e9; color: var(--success); }
+.exam-pass-badge.fail { background: #ffebee; color: var(--danger); }
+.flag-btn { padding: 6px 14px; border-radius: 8px; border: 2px solid var(--accent); background: transparent; color: #b45309; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.12s; }
+.flag-btn.flagged { background: var(--accent); color: #fff; }
+/* LLM PROVIDER STYLES */
+.provider-tab { padding: 8px 16px; border-radius: 8px; border: 2px solid var(--border); cursor: pointer; font-size: 0.83rem; font-weight: 600; transition: all 0.12s; background: var(--card); }
+.provider-tab.active { border-color: #7c3aed; background: #ede9fe; color: #5b21b6; }
+.provider-field { margin-bottom: 12px; }
+.provider-field label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 5px; }
+.provider-field input, .provider-field select { width: 100%; padding: 9px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.87rem; background: #f9fafb; }
+.provider-field input:focus, .provider-field select:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px #ede9fe; }
+.llm-active-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; background: #e0f2e9; color: var(--primary-dark); }
 </style>
 </head>
 <body>
@@ -244,6 +288,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
   <nav>
     <a class="nav-link active" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
     <a class="nav-link" data-page="quiz"><span class="icon">🎯</span> Practice Quiz</a>
+    <a class="nav-link" data-page="mockexam"><span class="icon">🏆</span> Mock Exam</a>
     <a class="nav-link" data-page="review"><span class="icon">📋</span> Wrong Answers</a>
     <a class="nav-link" data-page="analytics"><span class="icon">📈</span> Analytics</a>
     <a class="nav-link" data-page="domains"><span class="icon">📚</span> Domain Guide</a>
@@ -434,6 +479,139 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
       <div id="domain-guide-list"></div>
     </div>
 
+    <!-- MOCK EXAM PAGE -->
+    <div id="page-mockexam" class="page">
+
+      <!-- Setup View -->
+      <div id="mockexam-setup">
+        <div class="section-title">🏆 Mock CISSP Exam</div>
+        <div class="grid-2" style="max-width:860px;gap:20px;">
+          <div class="card">
+            <h3>Exam Configuration</h3>
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Number of Questions</label>
+              <select id="mock-q-count" class="btn btn-secondary" style="width:100%;text-align:left;">
+                <option value="25">25 Questions (~48 min)</option>
+                <option value="50">50 Questions (~96 min)</option>
+                <option value="125" selected>125 Questions — Full CBT (4 hours)</option>
+              </select>
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Timer</label>
+              <select id="mock-timer-mode" class="btn btn-secondary" style="width:100%;text-align:left;">
+                <option value="proportional" selected>Proportional (1.92 min/question)</option>
+                <option value="240">Fixed 4-Hour Limit</option>
+                <option value="none">No Timer (Untimed Practice)</option>
+              </select>
+            </div>
+            <div style="margin-bottom:20px;">
+              <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Question Source</label>
+              <select id="mock-q-source" class="btn btn-secondary" style="width:100%;text-align:left;">
+                <option value="all" selected>All Questions (Built-in + Loaded)</option>
+                <option value="domain-weighted">Domain-Weighted (Exam Distribution)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary w-full" style="font-size:1rem;padding:14px;" onclick="startMockExam()">🚀 Begin Mock Exam</button>
+            <p class="text-muted" style="margin-top:10px;font-size:0.78rem;">⚠️ During the exam, no explanations are shown. Review after submission.</p>
+          </div>
+          <div class="card">
+            <h3>📋 Exam Rules</h3>
+            <ul style="font-size:0.87rem;line-height:2;color:var(--text-muted);padding-left:18px;">
+              <li>No explanations shown during exam</li>
+              <li>You can flag questions for review</li>
+              <li>Navigate freely between questions</li>
+              <li>Timer auto-submits when expired</li>
+              <li>Passing score: <strong style="color:var(--success);">70% (700/1000)</strong></li>
+              <li>Domain-weighted scoring like real CBT</li>
+              <li>Up to 5 attempts saved in history</li>
+            </ul>
+            <hr class="divider">
+            <h3>🏆 Exam History</h3>
+            <div id="mockexam-history-mini">
+              <p class="text-muted" style="font-size:0.84rem;">No attempts yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Exam View -->
+      <div id="mockexam-active" style="display:none;">
+        <div class="exam-header">
+          <div style="text-align:center;">
+            <div style="font-size:0.72rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Timer</div>
+            <div class="exam-timer" id="exam-timer-display">4:00:00</div>
+          </div>
+          <div class="exam-progress-wrap">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);margin-bottom:5px;">
+              <span id="exam-q-counter">Question 1 of 125</span>
+              <span id="exam-answered-count">0 answered · <span id="exam-flagged-count" style="color:#b45309;">0 flagged</span></span>
+            </div>
+            <div class="exam-progress-bar"><div class="exam-progress-fill" id="exam-progress-fill" style="width:0%"></div></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="flag-btn" id="exam-flag-btn" onclick="toggleExamFlag()">🚩 Flag</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmSubmitExam()">Submit Exam</button>
+          </div>
+        </div>
+
+        <div id="exam-question-container" style="max-width:800px;margin:0 auto;">
+          <div class="question-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <span class="q-num" id="exam-q-num">Question 1</span>
+              <span class="q-domain-badge" id="exam-q-domain">Domain 1</span>
+            </div>
+            <div class="question-text" id="exam-q-text"></div>
+            <div class="options" id="exam-q-options"></div>
+          </div>
+          <div class="quiz-controls" style="margin-top:16px;">
+            <button class="btn btn-secondary" onclick="examNavQuestion(-1)" id="exam-btn-prev">← Previous</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleExamNav()" id="exam-nav-toggle">📋 Question Map</button>
+              <button class="btn btn-primary" onclick="examNavQuestion(1)" id="exam-btn-next">Next →</button>
+            </div>
+          </div>
+          <div id="exam-nav-grid" style="display:none;margin-top:16px;">
+            <div class="card">
+              <h3 style="font-size:0.88rem;margin-bottom:12px;">Question Navigator — click to jump</h3>
+              <div class="exam-question-nav" id="exam-q-dots"></div>
+              <div style="margin-top:12px;font-size:0.76rem;color:var(--text-muted);display:flex;gap:14px;flex-wrap:wrap;">
+                <span>⬜ Unanswered</span><span style="color:var(--primary);">■ Answered</span><span style="color:#b45309;">■ Flagged</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results View -->
+      <div id="mockexam-results" style="display:none;">
+        <div style="max-width:700px;margin:0 auto;text-align:center;">
+          <div class="section-title">📊 Exam Results</div>
+          <div class="card" style="margin-bottom:18px;">
+            <div class="exam-score-big" id="exam-result-pct">0%</div>
+            <div id="exam-result-badge" style="margin:8px 0 16px;"></div>
+            <div style="font-size:0.92rem;color:var(--text-muted);" id="exam-result-meta"></div>
+            <div id="exam-result-time" style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;"></div>
+          </div>
+          <div class="card" style="margin-bottom:18px;text-align:left;">
+            <h3>Domain Breakdown</h3>
+            <div id="exam-domain-results"></div>
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="reviewExamAnswers()">🔍 Review All Answers</button>
+            <button class="btn btn-secondary" onclick="showMockExamSetup()">🔁 New Exam</button>
+            <button class="btn btn-secondary" onclick="showPage('dashboard')">🏠 Dashboard</button>
+          </div>
+
+          <!-- Exam Review Section -->
+          <div id="exam-review-section" style="display:none;text-align:left;margin-top:24px;">
+            <div class="section-title" style="font-size:1rem;">📋 Answer Review</div>
+            <div id="exam-review-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- SETTINGS PAGE -->
     <div id="page-settings" class="page">
       <div class="section-title">⚙️ Settings</div>
@@ -488,6 +666,40 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
         </p>
       </div>
 
+      <!-- Multi-LLM Provider Card -->
+      <div class="card mb-4" style="max-width:600px;margin-bottom:18px;border:1px solid #c4b5fd;">
+        <h3 style="color:#5b21b6;">🧠 AI Provider Settings</h3>
+        <p class="text-muted" style="margin:8px 0 16px;">Configure which AI provider powers explanations, question generation, and study plans. Keys stored locally, never sent anywhere except the selected provider's API.</p>
+
+        <div style="margin-bottom:16px;">
+          <label class="provider-field" style="margin-bottom:10px;">
+            <span style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px;">Active Provider <span id="llm-active-badge" class="llm-active-badge" style="margin-left:6px;">Not set</span></span>
+            <select id="llm-provider-select" class="btn btn-secondary" style="width:100%;text-align:left;" onchange="renderProviderFields()">
+              <option value="claude">Claude (Anthropic)</option>
+              <option value="gemini">Gemini (Google)</option>
+              <option value="ollama">Ollama (Local)</option>
+              <option value="openai">OpenAI-Compatible (OpenAI / MiniMax / Qwen)</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="llm-provider-fields"></div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <button class="btn btn-primary btn-sm" style="background:#7c3aed;" onclick="saveLLMProvider()">💾 Save & Activate</button>
+          <button class="btn btn-secondary btn-sm" onclick="testLLMProvider()">🔌 Test Connection</button>
+        </div>
+        <div id="llm-provider-status" style="margin-top:10px;font-size:0.83rem;display:none;"></div>
+
+        <hr class="divider">
+        <p class="text-muted" style="font-size:0.81rem;line-height:1.7;">
+          <strong>Claude:</strong> Best for nuanced CISSP explanations · sk-ant-api03-… key<br>
+          <strong>Gemini:</strong> Google's model · Free tier available · AIza… key<br>
+          <strong>Ollama:</strong> Runs 100% locally, no data leaves your machine · Requires <code>ollama serve</code><br>
+          <strong>OpenAI-Compatible:</strong> Works with OpenAI, MiniMax, Qwen, or any OpenAI-format API
+        </p>
+      </div>
+
       <!-- Danger Zone -->
       <div class="card" style="max-width:600px;border:1px solid #ffcdd2;">
         <h3 style="color:var(--danger);">⚠️ Danger Zone</h3>
@@ -510,7 +722,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; 
 
 <script>
 // ============================================================
-// QUESTION BANK — 120+ Questions across all 8 CISSP Domains
+// QUESTION BANK — 60 built-in questions across all 8 CISSP Domains
 // ============================================================
 const QUESTION_BANK = [
 // ===== DOMAIN 1: Security & Risk Management =====
@@ -743,7 +955,7 @@ function showPage(pageName) {
   document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
   document.getElementById('page-' + pageName).classList.add('active');
   document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
-  const titles = {dashboard:'Dashboard',quiz:'Practice Quiz',review:'Wrong Answer Review',analytics:'Analytics',domains:'Domain Study Guide',settings:'Settings'};
+  const titles = {dashboard:'Dashboard',quiz:'Practice Quiz',mockexam:'Mock Exam',review:'Wrong Answer Review',analytics:'Analytics',domains:'Domain Study Guide',settings:'Settings'};
   document.getElementById('page-title').textContent = titles[pageName] || pageName;
 
   if (pageName === 'dashboard') renderDashboard();
@@ -751,6 +963,7 @@ function showPage(pageName) {
   if (pageName === 'analytics') renderAnalytics();
   if (pageName === 'domains') renderDomains();
   if (pageName === 'settings') renderSettings();
+  if (pageName === 'mockexam') renderMockExamSetup();
   if (pageName === 'quiz') {
     document.getElementById('quiz-setup').style.display = 'block';
     document.getElementById('quiz-active').style.display = 'none';
@@ -1448,6 +1661,7 @@ async function clearWrongAnswersWithBackend() {
 // ─── Settings page render ────────────────────────────────────────────────────
 function renderSettings() {
   updateClaudeStatusBadge();
+  loadLLMProviderUI();
   const el = document.getElementById('settings-storage-detail');
   if (!el) return;
   if (USE_BACKEND) {
@@ -1744,47 +1958,191 @@ async function generateStudyPlan() {
 }
 
 function renderStudyPlan(data) {
-  let html = '<div class="plan-card">';
-  html += '<h4>📊 Readiness Assessment</h4>';
-  html += `<p style="font-size:0.88rem;line-height:1.65;margin-bottom:16px;">${data.readinessAssessment || ''}</p>`;
-
-  if (data.priorityOrder && data.priorityOrder.length > 0) {
-    html += '<h4>🎯 Study Priority Order</h4><ol style="margin:8px 0 16px 18px;font-size:0.86rem;line-height:1.8;">';
-    data.priorityOrder.forEach(p => { html += `<li>${p}</li>`; });
-    html += '</ol>';
+  // Safety net: if the server couldn't parse the LLM JSON, it puts the raw LLM text
+  // into data.readinessAssessment. We detect this and try to parse it in the browser.
+  if (data.readinessAssessment && typeof data.readinessAssessment === 'string') {
+    const ra = data.readinessAssessment;
+    // Detect if it looks like raw LLM output containing JSON (has our expected keys)
+    const looksLikeRawJSON = ra.includes('"readinessAssessment"') ||
+                              ra.includes('"weeklyPlan"') ||
+                              ra.startsWith('{') ||
+                              ra.startsWith('```');
+    if (looksLikeRawJSON) {
+      let reparsed = null;
+      // Attempt 1: strip ALL code fences with regex, then parse
+      try {
+        const cleaned = ra
+          .replace(/^```[a-zA-Z]*\s*/m, '')   // remove opening fence + language
+          .replace(/\s*```\s*$/m, '')           // remove closing fence
+          .trim();
+        reparsed = JSON.parse(cleaned);
+      } catch(e) {}
+      // Attempt 2: extract the first {...} block with a regex (handles preamble text)
+      if (!reparsed || !reparsed.readinessAssessment) {
+        try {
+          const m = ra.match(/\{[\s\S]*\}/);
+          if (m) reparsed = JSON.parse(m[0]);
+        } catch(e) {}
+      }
+      if (reparsed && reparsed.readinessAssessment) data = reparsed;
+    }
   }
 
+  // Store for export functions
+  window._studyPlanData = data;
+
+  let html = '<div class="plan-card">';
+
+  // ── Readiness Assessment ──────────────────────────────────────────────────
+  html += `<div class="plan-section">
+    <h4>📊 Readiness Assessment</h4>
+    <p style="font-size:0.88rem;line-height:1.7;margin:0;">${escHtml(data.readinessAssessment || '')}</p>
+  </div>`;
+
+  // ── Priority Order ────────────────────────────────────────────────────────
+  if (data.priorityOrder && data.priorityOrder.length > 0) {
+    html += `<div class="plan-section"><h4>🎯 Study Priority Order</h4><ol class="plan-list">`;
+    data.priorityOrder.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
+    html += `</ol></div>`;
+  }
+
+  // ── Weekly Schedule ───────────────────────────────────────────────────────
   if (data.weeklyPlan && data.weeklyPlan.length > 0) {
-    html += '<h4>📅 Weekly Schedule</h4>';
+    html += `<div class="plan-section"><h4>📅 Weekly Schedule</h4>`;
     data.weeklyPlan.forEach(week => {
       html += `<div class="plan-week">
-        <div class="week-label">Week ${week.week}: ${week.focus}</div>
-        <div class="week-focus">Daily goal: ${week.dailyGoal || ''}`;
+        <div class="week-label">Week ${week.week}: ${escHtml(week.focus || '')}</div>
+        <div class="week-goal">🎯 ${escHtml(week.dailyGoal || '')}</div>`;
       if (week.topics && week.topics.length > 0) {
-        html += ` · Topics: ${week.topics.join(', ')}`;
+        html += `<ul class="week-topics">`;
+        week.topics.forEach(t => { html += `<li>${escHtml(t)}</li>`; });
+        html += `</ul>`;
       }
-      html += '</div></div>';
+      html += `</div>`;
     });
+    html += `</div>`;
   }
 
+  // ── Practice Recommendations ──────────────────────────────────────────────
   if (data.practiceRecommendations && data.practiceRecommendations.length > 0) {
-    html += '<h4 style="margin-top:14px;">💡 Practice Recommendations</h4><ul style="margin:8px 0 0 18px;font-size:0.85rem;line-height:1.8;">';
-    data.practiceRecommendations.forEach(r => { html += `<li>${r}</li>`; });
-    html += '</ul>';
+    html += `<div class="plan-section"><h4>💡 Practice Recommendations</h4><ul class="plan-list">`;
+    data.practiceRecommendations.forEach(r => { html += `<li>${escHtml(r)}</li>`; });
+    html += `</ul></div>`;
   }
 
+  // ── Exam Readiness Checklist ──────────────────────────────────────────────
   if (data.examReadinessChecklist && data.examReadinessChecklist.length > 0) {
-    html += '<h4 style="margin-top:14px;">✅ Exam Readiness Checklist</h4><ul style="margin:8px 0 0 18px;font-size:0.85rem;line-height:1.8;">';
-    data.examReadinessChecklist.forEach(item => { html += `<li>${item}</li>`; });
-    html += '</ul>';
+    html += `<div class="plan-section"><h4>✅ Exam Readiness Checklist</h4><ul class="plan-list checklist">`;
+    data.examReadinessChecklist.forEach(item => {
+      html += `<li><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+        <input type="checkbox" style="margin-top:3px;flex-shrink:0;"> <span>${escHtml(item)}</span>
+      </label></li>`;
+    });
+    html += `</ul></div>`;
   }
 
-  const today = new Date().toLocaleDateString();
-  html += `<div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">
-    <button class="btn btn-secondary btn-sm" onclick="copyStudyPlan(this)">📋 Copy to Clipboard</button>
+  // ── Export / Action buttons ───────────────────────────────────────────────
+  html += `<div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+    <button class="btn btn-secondary btn-sm" onclick="copyStudyPlan(this)">📋 Copy Text</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportStudyPlanCSV()">⬇️ Export CSV</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportStudyPlanExcel()">📊 Export Excel</button>
   </div>`;
   html += '</div>';
   return html;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function exportStudyPlanCSV() {
+  const data = window._studyPlanData;
+  if (!data) return;
+  const esc = s => `"${String(s).replace(/"/g, '""')}"`;
+  const rows = [['Section', 'Item', 'Details']];
+
+  rows.push(['Readiness Assessment', '', data.readinessAssessment || '']);
+
+  (data.priorityOrder || []).forEach((p, i) => {
+    rows.push(['Study Priority', `Priority ${i + 1}`, p]);
+  });
+
+  (data.weeklyPlan || []).forEach(week => {
+    rows.push([`Week ${week.week}`, week.focus || '', `Daily Goal: ${week.dailyGoal || ''}`]);
+    (week.topics || []).forEach(t => {
+      rows.push([`Week ${week.week} Topics`, '', t]);
+    });
+  });
+
+  (data.practiceRecommendations || []).forEach((r, i) => {
+    rows.push(['Practice Recommendation', `Tip ${i + 1}`, r]);
+  });
+
+  (data.examReadinessChecklist || []).forEach((item, i) => {
+    rows.push(['Exam Readiness Checklist', `Item ${i + 1}`, item]);
+  });
+
+  const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel UTF-8
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'CISSP_Study_Plan.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function exportStudyPlanExcel() {
+  const data = window._studyPlanData;
+  if (!data) return;
+  const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const th = (s, bg='#1e40af', fg='white') =>
+    `<td style="background:${bg};color:${fg};font-weight:bold;padding:8px 12px;border:1px solid #ccc;">${e(s)}</td>`;
+  const td = (s, bg='#fff') =>
+    `<td style="background:${bg};padding:7px 12px;border:1px solid #e5e7eb;vertical-align:top;">${e(s)}</td>`;
+
+  let rows = `<tr>${th('Section')}${th('Item')}${th('Details')}</tr>`;
+
+  rows += `<tr>${td('📊 Readiness Assessment','#dbeafe')}${td('')}${td(data.readinessAssessment||'','#dbeafe')}</tr>`;
+
+  (data.priorityOrder||[]).forEach((p,i)=>{
+    rows += `<tr>${td('🎯 Study Priority')}${td(`Priority ${i+1}`)}${td(p)}</tr>`;
+  });
+
+  (data.weeklyPlan||[]).forEach(week=>{
+    rows += `<tr>${td(`📅 Week ${week.week}`,'#f0fdf4')}${td(week.focus||'','#f0fdf4')}${td('🎯 Daily Goal: '+(week.dailyGoal||''),'#f0fdf4')}</tr>`;
+    (week.topics||[]).forEach(t=>{
+      rows += `<tr>${td('')}${td('Topic','#fafafa')}${td(t,'#fafafa')}</tr>`;
+    });
+  });
+
+  (data.practiceRecommendations||[]).forEach((r,i)=>{
+    rows += `<tr>${td('💡 Practice Tip')}${td(`Tip ${i+1}`)}${td(r)}</tr>`;
+  });
+
+  (data.examReadinessChecklist||[]).forEach((item,i)=>{
+    rows += `<tr>${td('✅ Exam Checklist')}${td(`${i+1}`)}${td(item)}</tr>`;
+  });
+
+  const title = `CISSP Study Plan — Generated ${new Date().toLocaleDateString()}`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:x="urn:schemas-microsoft-com:office:excel"
+    xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Study Plan</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+</head><body>
+<table border="1" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:13px;">
+<tr><td colspan="3" style="background:#1e40af;color:white;font-size:16px;font-weight:bold;padding:12px 16px;border:1px solid #1e40af;">${e(title)}</td></tr>
+${rows}
+</table></body></html>`;
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'CISSP_Study_Plan.xls';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function copyStudyPlan(btn) {
@@ -1793,6 +2151,524 @@ function copyStudyPlan(btn) {
     btn.textContent = '✅ Copied!';
     setTimeout(() => { btn.textContent = '📋 Copy to Clipboard'; }, 2000);
   });
+}
+
+// ============================================================
+// MOCK EXAM ENGINE
+// ============================================================
+let mockExam = {
+  questions: [], answers: {}, flags: new Set(),
+  currentIdx: 0, examId: null,
+  startTime: null, timerSeconds: 0, timerInterval: null,
+  submitted: false
+};
+
+const DOMAIN_WEIGHTS = [
+  { id:1, weight:0.16 }, { id:2, weight:0.10 }, { id:3, weight:0.13 },
+  { id:4, weight:0.13 }, { id:5, weight:0.13 }, { id:6, weight:0.12 },
+  { id:7, weight:0.13 }, { id:8, weight:0.10 }
+];
+
+function renderMockExamSetup() {
+  showMockExamSetup();
+  loadMockExamHistory();
+}
+
+function showMockExamSetup() {
+  document.getElementById('mockexam-setup').style.display = 'block';
+  document.getElementById('mockexam-active').style.display = 'none';
+  document.getElementById('mockexam-results').style.display = 'none';
+  if (mockExam.timerInterval) { clearInterval(mockExam.timerInterval); mockExam.timerInterval = null; }
+}
+
+async function loadMockExamHistory() {
+  const container = document.getElementById('mockexam-history-mini');
+  if (!container) return;
+  let history = [];
+  if (USE_BACKEND) {
+    try {
+      const r = await fetch(API_BASE + '/api/mock-exam/history');
+      if (r.ok) { const d = await r.json(); history = d.exams || []; }
+    } catch(e) {}
+  } else {
+    try { history = JSON.parse(localStorage.getItem('mock_exam_history') || '[]'); } catch(e) {}
+  }
+  history = history.slice(0, 5); // show max 5
+  if (history.length === 0) {
+    container.innerHTML = '<p class="text-muted" style="font-size:0.84rem;">No attempts yet.</p>';
+    return;
+  }
+  container.innerHTML = history.map((e, i) => {
+    const pct = e.score !== null && e.score !== undefined ? Math.round(e.score) : null;
+    const passed = pct !== null && pct >= 70;
+    const cls = pct === null ? '' : passed ? 'pass' : 'fail';
+    const date = e.completed_at ? new Date(e.completed_at).toLocaleDateString() : (e.started_at ? new Date(e.started_at).toLocaleDateString() : '—');
+    const status = e.status === 'in_progress' ? '<span style="color:var(--accent);font-weight:600;">In Progress</span>' : (pct !== null ? `<strong style="color:${passed?'var(--success)':'var(--danger)'};">${pct}%</strong> ${passed?'✅ PASS':'❌ FAIL'}` : '—');
+    return `<div class="exam-history-card ${cls}" style="margin-bottom:8px;">
+      <div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">Attempt ${history.length - i} · ${date}</div>
+        <div style="font-size:0.88rem;margin-top:3px;">${e.total_questions || e.totalQuestions || '?'} questions · ${e.status || 'completed'}</div>
+      </div>
+      <div style="text-align:right;font-size:0.92rem;">${status}</div>
+    </div>`;
+  }).join('');
+}
+
+function startMockExam() {
+  const countVal = parseInt(document.getElementById('mock-q-count').value);
+  const timerMode = document.getElementById('mock-timer-mode').value;
+  const source = document.getElementById('mock-q-source').value;
+
+  // Sample questions
+  let pool = [...QUESTION_BANK];
+  let selected = [];
+  if (source === 'domain-weighted') {
+    DOMAIN_WEIGHTS.forEach(dw => {
+      const domainPool = pool.filter(q => q.domain === dw.id);
+      const take = Math.round(countVal * dw.weight);
+      const shuffled = domainPool.sort(() => Math.random() - 0.5);
+      selected.push(...shuffled.slice(0, Math.min(take, domainPool.length)));
+    });
+    // Fill any remaining slots
+    const remaining = countVal - selected.length;
+    if (remaining > 0) {
+      const taken = new Set(selected.map(q => q.id));
+      const extra = pool.filter(q => !taken.has(q.id)).sort(() => Math.random() - 0.5).slice(0, remaining);
+      selected.push(...extra);
+    }
+  } else {
+    selected = pool.sort(() => Math.random() - 0.5).slice(0, Math.min(countVal, pool.length));
+  }
+  selected = selected.sort(() => Math.random() - 0.5); // final shuffle
+
+  if (selected.length === 0) { alert('No questions available.'); return; }
+
+  // Set timer
+  let timerSecs = 0;
+  if (timerMode === 'proportional') { timerSecs = Math.round(selected.length * 1.92 * 60); }
+  else if (timerMode === '240') { timerSecs = 240 * 60; }
+  // timerMode 'none' → timerSecs = 0 (no timer)
+
+  mockExam = {
+    questions: selected, answers: {}, flags: new Set(),
+    currentIdx: 0, examId: null,
+    startTime: Date.now(), timerSeconds: timerSecs, timerInterval: null,
+    submitted: false
+  };
+
+  // Save to backend if available
+  if (USE_BACKEND) {
+    fetch(API_BASE + '/api/mock-exam/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question_ids: selected.map(q => q.id),
+        duration_limit: timerMode === 'none' ? 0 : Math.round(timerSecs / 60)
+      })
+    }).then(r => r.json()).then(d => { if (d.id) mockExam.examId = d.id; }).catch(() => {});
+  }
+
+  document.getElementById('mockexam-setup').style.display = 'none';
+  document.getElementById('mockexam-active').style.display = 'block';
+  document.getElementById('mockexam-results').style.display = 'none';
+
+  renderExamQuestion();
+  renderExamDots();
+  if (timerSecs > 0) startExamTimer(timerSecs);
+}
+
+function startExamTimer(totalSecs) {
+  let remaining = totalSecs;
+  updateTimerDisplay(remaining);
+  mockExam.timerInterval = setInterval(() => {
+    remaining--;
+    updateTimerDisplay(remaining);
+    if (remaining <= 0) {
+      clearInterval(mockExam.timerInterval);
+      submitMockExam(true);
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay(secs) {
+  const el = document.getElementById('exam-timer-display');
+  if (!el) return;
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  el.textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.className = 'exam-timer';
+  if (secs <= 0) { el.textContent = '0:00:00'; el.className = 'exam-timer critical'; }
+  else if (secs <= 300) el.className = 'exam-timer critical';
+  else if (secs <= 900) el.className = 'exam-timer warning';
+}
+
+function renderExamQuestion() {
+  const q = mockExam.questions[mockExam.currentIdx];
+  const total = mockExam.questions.length;
+  const idx = mockExam.currentIdx;
+
+  document.getElementById('exam-q-counter').textContent = `Question ${idx + 1} of ${total}`;
+  document.getElementById('exam-q-num').textContent = `Question ${idx + 1}`;
+  const domain = DOMAINS.find(d => d.id === q.domain);
+  document.getElementById('exam-q-domain').textContent = domain ? `Domain ${q.domain}: ${domain.name}` : `Domain ${q.domain}`;
+  document.getElementById('exam-q-text').textContent = q.text;
+
+  // Progress
+  const answered = Object.keys(mockExam.answers).length;
+  const flagged = mockExam.flags.size;
+  document.getElementById('exam-progress-fill').style.width = `${(answered / total) * 100}%`;
+  document.getElementById('exam-answered-count').innerHTML = `${answered} answered · <span id="exam-flagged-count" style="color:#b45309;">${flagged} flagged</span>`;
+
+  // Flag button
+  const flagBtn = document.getElementById('exam-flag-btn');
+  if (mockExam.flags.has(idx)) { flagBtn.textContent = '🚩 Flagged'; flagBtn.classList.add('flagged'); }
+  else { flagBtn.textContent = '🚩 Flag'; flagBtn.classList.remove('flagged'); }
+
+  // Options
+  const optContainer = document.getElementById('exam-q-options');
+  optContainer.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'option' + (mockExam.answers[idx] === i ? ' correct' : '');
+    div.style.cursor = 'pointer';
+    div.innerHTML = `<span class="opt-letter">${letters[i]}</span><span>${opt}</span>`;
+    div.onclick = () => selectExamAnswer(idx, i);
+    optContainer.appendChild(div);
+  });
+
+  // Nav buttons
+  document.getElementById('exam-btn-prev').disabled = idx === 0;
+  document.getElementById('exam-btn-next').textContent = idx === total - 1 ? 'Review & Submit →' : 'Next →';
+
+  renderExamDots();
+}
+
+function selectExamAnswer(questionIdx, optionIdx) {
+  mockExam.answers[questionIdx] = optionIdx;
+  renderExamQuestion(); // re-render to show selection
+}
+
+function toggleExamFlag() {
+  const idx = mockExam.currentIdx;
+  if (mockExam.flags.has(idx)) mockExam.flags.delete(idx);
+  else mockExam.flags.add(idx);
+  renderExamQuestion();
+}
+
+function examNavQuestion(delta) {
+  const total = mockExam.questions.length;
+  const newIdx = mockExam.currentIdx + delta;
+  if (newIdx < 0) return;
+  if (newIdx >= total) { confirmSubmitExam(); return; }
+  mockExam.currentIdx = newIdx;
+  renderExamQuestion();
+}
+
+function toggleExamNav() {
+  const grid = document.getElementById('exam-nav-grid');
+  const btn = document.getElementById('exam-nav-toggle');
+  if (grid.style.display === 'none') { grid.style.display = 'block'; btn.textContent = '✕ Close Map'; }
+  else { grid.style.display = 'none'; btn.textContent = '📋 Question Map'; }
+}
+
+function renderExamDots() {
+  const container = document.getElementById('exam-q-dots');
+  if (!container) return;
+  container.innerHTML = '';
+  mockExam.questions.forEach((q, i) => {
+    const dot = document.createElement('div');
+    let cls = 'exam-q-dot';
+    if (i === mockExam.currentIdx) cls += ' current';
+    if (mockExam.flags.has(i)) cls += ' flagged';
+    else if (mockExam.answers[i] !== undefined) cls += ' answered';
+    dot.className = cls;
+    dot.textContent = i + 1;
+    dot.onclick = () => { mockExam.currentIdx = i; renderExamQuestion(); };
+    container.appendChild(dot);
+  });
+}
+
+function confirmSubmitExam() {
+  const total = mockExam.questions.length;
+  const answered = Object.keys(mockExam.answers).length;
+  const unanswered = total - answered;
+  const flagged = mockExam.flags.size;
+  let msg = `Submit exam?\n\n• ${answered} of ${total} questions answered`;
+  if (unanswered > 0) msg += `\n• ⚠️ ${unanswered} questions unanswered`;
+  if (flagged > 0) msg += `\n• 🚩 ${flagged} questions flagged for review`;
+  if (confirm(msg)) submitMockExam(false);
+}
+
+function submitMockExam(timeExpired) {
+  if (mockExam.submitted) return;
+  mockExam.submitted = true;
+  if (mockExam.timerInterval) { clearInterval(mockExam.timerInterval); mockExam.timerInterval = null; }
+
+  // Grade answers
+  let correct = 0;
+  const domainResults = {};
+  const wrongIds = [];
+  mockExam.questions.forEach((q, i) => {
+    const userAns = mockExam.answers[i];
+    const isCorrect = userAns !== undefined && userAns === q.answer;
+    if (isCorrect) correct++;
+    else wrongIds.push(q.id);
+    if (!domainResults[q.domain]) domainResults[q.domain] = { answered: 0, correct: 0 };
+    domainResults[q.domain].answered++;
+    if (isCorrect) domainResults[q.domain].correct++;
+  });
+
+  const total = mockExam.questions.length;
+  const pct = Math.round((correct / total) * 100);
+  const passed = pct >= 70;
+  const elapsed = Math.round((Date.now() - mockExam.startTime) / 1000);
+
+  // Save to backend
+  if (USE_BACKEND && mockExam.examId) {
+    fetch(API_BASE + '/api/mock-exam/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        examId: mockExam.examId,
+        answers: mockExam.answers,
+        domainResults,
+        correctCount: correct,
+        score: pct
+      })
+    }).catch(() => {});
+  }
+
+  // Save to localStorage history
+  const histEntry = {
+    started_at: new Date(mockExam.startTime).toISOString(),
+    completed_at: new Date().toISOString(),
+    total_questions: total, correct_count: correct, score: pct,
+    status: 'completed', domain_results: domainResults
+  };
+  try {
+    const hist = JSON.parse(localStorage.getItem('mock_exam_history') || '[]');
+    hist.unshift(histEntry);
+    localStorage.setItem('mock_exam_history', JSON.stringify(hist.slice(0, 5)));
+  } catch(e) {}
+
+  // Show results
+  showExamResults(pct, correct, total, domainResults, elapsed, passed, timeExpired);
+}
+
+function showExamResults(pct, correct, total, domainResults, elapsedSecs, passed, timeExpired) {
+  document.getElementById('mockexam-setup').style.display = 'none';
+  document.getElementById('mockexam-active').style.display = 'none';
+  document.getElementById('mockexam-results').style.display = 'block';
+
+  const scoreEl = document.getElementById('exam-result-pct');
+  scoreEl.textContent = pct + '%';
+  scoreEl.className = 'exam-score-big ' + (passed ? 'pass' : 'fail');
+
+  const badge = document.getElementById('exam-result-badge');
+  badge.innerHTML = `<span class="exam-pass-badge ${passed ? 'pass' : 'fail'}">${passed ? '✅ PASS — Ready to Schedule!' : '❌ FAIL — Keep Studying'}</span>`;
+  if (timeExpired) badge.innerHTML += ' <span style="font-size:0.82rem;color:var(--danger);">(Time Expired)</span>';
+
+  document.getElementById('exam-result-meta').textContent = `${correct} correct out of ${total} questions`;
+  const mins = Math.floor(elapsedSecs / 60), secs = elapsedSecs % 60;
+  document.getElementById('exam-result-time').textContent = `Time used: ${mins}m ${secs}s`;
+
+  // Domain breakdown
+  const container = document.getElementById('exam-domain-results');
+  container.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const dr = domainResults[d.id];
+    if (!dr || dr.answered === 0) return;
+    const dpct = Math.round((dr.correct / dr.answered) * 100);
+    const color = dpct >= 75 ? 'var(--success)' : dpct >= 60 ? 'var(--accent)' : 'var(--danger)';
+    container.innerHTML += `<div class="progress-wrap" style="margin-bottom:14px;">
+      <div class="label-row">
+        <span style="font-size:0.83rem;font-weight:600;">D${d.id}: ${d.name}</span>
+        <span style="font-size:0.83rem;font-weight:700;color:${color};">${dpct}% (${dr.correct}/${dr.answered})</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${dpct}%;background:${color};"></div></div>
+    </div>`;
+  });
+  document.getElementById('exam-review-section').style.display = 'none';
+}
+
+function reviewExamAnswers() {
+  const section = document.getElementById('exam-review-section');
+  const list = document.getElementById('exam-review-list');
+  section.style.display = 'block';
+  section.scrollIntoView({ behavior: 'smooth' });
+
+  const letters = ['A', 'B', 'C', 'D'];
+  list.innerHTML = mockExam.questions.map((q, i) => {
+    const userAns = mockExam.answers[i];
+    const isCorrect = userAns !== undefined && userAns === q.answer;
+    const statusIcon = userAns === undefined ? '⬜ Skipped' : isCorrect ? '✅ Correct' : '❌ Wrong';
+    const domain = DOMAINS.find(d => d.id === q.domain);
+    return `<div style="background:var(--card);border-radius:10px;padding:18px;margin-bottom:12px;border-left:4px solid ${isCorrect ? 'var(--success)' : userAns===undefined ? 'var(--border)' : 'var(--danger)'};">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text-muted);">Q${i+1} · ${domain ? domain.name : 'Domain '+q.domain}</span>
+        <span style="font-size:0.82rem;font-weight:700;">${statusIcon}</span>
+      </div>
+      <p style="font-size:0.9rem;line-height:1.55;margin-bottom:12px;">${q.text}</p>
+      ${q.options.map((opt, oi) => {
+        let style = 'padding:8px 12px;border-radius:7px;font-size:0.86rem;margin-bottom:6px;border:1px solid var(--border);';
+        if (oi === q.answer) style += 'background:#e8f5e9;border-color:var(--success);font-weight:600;';
+        else if (oi === userAns && !isCorrect) style += 'background:#ffebee;border-color:var(--danger);';
+        return `<div style="${style}">${letters[oi]}. ${opt}${oi===q.answer?' ← Correct':''}${oi===userAns&&!isCorrect?' ← Your answer':''}</div>`;
+      }).join('')}
+      <div style="margin-top:10px;background:#fffde7;border:1px solid #ffe082;border-radius:8px;padding:12px;">
+        <div style="font-size:0.78rem;font-weight:700;color:#b45309;margin-bottom:5px;">Explanation</div>
+        <p style="font-size:0.84rem;line-height:1.6;color:#374151;">${q.explanation}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// MULTI-LLM PROVIDER SETTINGS
+// ============================================================
+let llmConfig = { provider: 'claude', providers: {} };
+
+const PROVIDER_FIELDS = {
+  claude: [
+    { id:'claude-key', label:'API Key', type:'password', placeholder:'sk-ant-api03-...', hint:'Get at console.anthropic.com → API Keys' }
+  ],
+  gemini: [
+    { id:'gemini-key', label:'API Key', type:'password', placeholder:'AIzaSy...', hint:'Get at aistudio.google.com' }
+  ],
+  ollama: [
+    { id:'ollama-url', label:'Base URL', type:'text', placeholder:'http://localhost:11434', hint:'Start Ollama with: ollama serve' },
+    { id:'ollama-model', label:'Model Name', type:'text', placeholder:'llama3.2', hint:'Pull first: ollama pull llama3.2' }
+  ],
+  openai: [
+    { id:'openai-url', label:'Base URL (API Endpoint)', type:'text', placeholder:'https://api.openai.com/v1', hint:'Use OpenAI URL, or MiniMax/Qwen endpoint' },
+    { id:'openai-key', label:'API Key', type:'password', placeholder:'sk-...', hint:'API key for the provider' },
+    { id:'openai-model', label:'Model Name', type:'text', placeholder:'gpt-4o-mini', hint:'e.g. gpt-4o-mini, abab6.5s-chat, qwen-turbo' }
+  ]
+};
+
+async function loadLLMProviderUI() {
+  if (!USE_BACKEND) return;
+  try {
+    const r = await fetch(API_BASE + '/api/config');
+    const data = await r.json();
+    llmConfig.provider = data.provider || 'claude';
+    llmConfig.providers = data.configuredProviders || {};
+    const sel = document.getElementById('llm-provider-select');
+    if (sel) sel.value = llmConfig.provider;
+    updateLLMActiveBadge();
+    renderProviderFields();
+  } catch(e) {}
+}
+
+function updateLLMActiveBadge() {
+  const badge = document.getElementById('llm-active-badge');
+  if (!badge) return;
+  const names = { claude: 'Claude', gemini: 'Gemini', ollama: 'Ollama', openai: 'OpenAI-Compat' };
+  badge.textContent = '✅ ' + (names[llmConfig.provider] || llmConfig.provider);
+}
+
+function renderProviderFields() {
+  const container = document.getElementById('llm-provider-fields');
+  if (!container) return;
+  const sel = document.getElementById('llm-provider-select');
+  const provider = sel ? sel.value : 'claude';
+  const fields = PROVIDER_FIELDS[provider] || [];
+  const saved = llmConfig.providers[provider] || {};
+
+  container.innerHTML = fields.map(f => `
+    <div class="provider-field">
+      <label for="${f.id}">${f.label}</label>
+      <input type="${f.type}" id="${f.id}" placeholder="${f.placeholder}" value="${saved[f.id.split('-').pop()] || saved[f.id] || ''}" autocomplete="off">
+      ${f.hint ? `<p class="text-muted" style="font-size:0.76rem;margin-top:4px;">${f.hint}</p>` : ''}
+    </div>`).join('');
+}
+
+function getProviderFieldValues(provider) {
+  const config = {};
+  (PROVIDER_FIELDS[provider] || []).forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) config[f.id] = el.value.trim();
+  });
+  return config;
+}
+
+async function saveLLMProvider() {
+  const sel = document.getElementById('llm-provider-select');
+  const provider = sel ? sel.value : 'claude';
+  const providerConfig = getProviderFieldValues(provider);
+  const statusEl = document.getElementById('llm-provider-status');
+
+  if (!USE_BACKEND) {
+    showLLMStatus('⚠️ Server not running — start cissp_server.py to save provider config.', 'error');
+    return;
+  }
+
+  // Build providerConfig object for backend
+  const pcMapped = {};
+  (PROVIDER_FIELDS[provider] || []).forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) pcMapped[f.id.split('-')[1] || f.id] = el.value.trim();
+  });
+
+  try {
+    const r = await fetch(API_BASE + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, providerConfig: { [provider]: pcMapped } })
+    });
+    if (r.ok) {
+      llmConfig.provider = provider;
+      llmConfig.providers[provider] = pcMapped;
+      hasApiKey = true;
+      updateLLMActiveBadge();
+      updateClaudeStatusBadge();
+      showLLMStatus('✅ Provider saved and activated!', 'success');
+      const planCard = document.getElementById('study-plan-card');
+      if (planCard) planCard.style.display = 'block';
+    } else {
+      const err = await r.json();
+      showLLMStatus('Error: ' + (err.error || 'Save failed'), 'error');
+    }
+  } catch(e) {
+    showLLMStatus('Server not running — start cissp_server.py first.', 'error');
+  }
+}
+
+async function testLLMProvider() {
+  showLLMStatus('🔌 Testing connection...', 'info');
+  try {
+    const r = await fetch(API_BASE + '/api/claude/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'What is the CIA Triad?', options: ['A','B','C','D'],
+        correctAnswer: 'A', userAnswer: 'B',
+        domain: 'Test', existingExplanation: 'CIA = Confidentiality, Integrity, Availability.'
+      })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      showLLMStatus(`✅ Connection successful! Provider is working.`, 'success');
+    } else {
+      showLLMStatus('Error: ' + (data.error || 'Connection failed'), 'error');
+    }
+  } catch(e) {
+    showLLMStatus('Cannot reach server. Start cissp_server.py first.', 'error');
+  }
+}
+
+function showLLMStatus(msg, type) {
+  const el = document.getElementById('llm-provider-status');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.padding = '10px 14px';
+  el.style.borderRadius = '7px';
+  el.style.fontSize = '0.83rem';
+  el.textContent = msg;
+  el.style.background = type === 'success' ? '#e8f5e9' : type === 'error' ? '#ffebee' : '#e0f2e9';
+  el.style.color = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#374151';
 }
 
 // ============================================================

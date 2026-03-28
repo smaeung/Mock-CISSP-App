@@ -1,0 +1,377 @@
+[
+  {
+    "id": 7001,
+    "domain": 7,
+    "text": "At 2:47 AM, a SOC analyst receives alerts indicating an unusual number of login failures followed by successful authentication for 15 privileged accounts across 3 systems. The source IP addresses are internal and belong to the IT helpdesk subnet. It is Saturday. What is the CORRECT initial response action?",
+    "options": [
+      "Wait until Monday morning — internal helpdesk activity on weekends requires management approval to investigate after hours",
+      "Immediately escalate to the Incident Response team: the pattern (successful privileged account compromise after login failures, Saturday 2:47 AM, IT helpdesk subnet sourcing unusual auth) strongly suggests either compromised helpdesk workstation or credential theft enabling privilege escalation; confirm the compromised accounts are not actively being used for data exfiltration; consider isolating the affected accounts and source systems while investigation begins — do not wait, as attackers often operate during off-hours to reduce detection time",
+      "Contact all 15 account owners immediately to verify if they are working and request they confirm or deny the activity",
+      "Block the helpdesk subnet at the firewall — if the subnet is compromised, blocking it limits damage"
+    ],
+    "answer": 1,
+    "explanation": "The incident indicators present a high-confidence threat: (1) Saturday 2:47 AM — anomalous time for legitimate privileged activity; (2) Login failures followed by success — credential guessing or stuffing succeeded; (3) Multiple privileged accounts — systematic privilege escalation; (4) Internal source — potentially compromised internal system used as pivot. Incident response timing: attackers frequently operate during off-hours specifically because detection and response is slower. The 15 compromised privileged accounts represent immediate, severe risk. Escalate to IR, do not wait — time is critical in active compromise scenarios.",
+    "weakness": "Incident response, after-hours escalation, privilege account compromise",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 7002,
+    "domain": 7,
+    "text": "During a ransomware incident, the Incident Response team confirms that ransomware has encrypted files on 40 servers. The business owner demands that encrypted servers be immediately wiped and restored from backup. The IR team's forensic analyst argues against immediate wiping. Who is correct and why?",
+    "options": [
+      "The business owner is correct — rapid restoration minimizes business impact and should take priority",
+      "The forensic analyst raises a valid concern: wiping servers destroys forensic evidence needed to: (1) Determine the initial attack vector (to prevent re-infection); (2) Identify the full scope of compromise (additional systems not yet encrypted); (3) Determine if data was exfiltrated before encryption (affects breach notification obligations); (4) Support law enforcement investigation and insurance claims; the correct approach is forensic imaging BEFORE wiping — capture memory (live acquisition) and disk images, then proceed with restoration to meet RTO, while preserving evidence",
+      "Both are wrong — servers should be kept in encrypted state until law enforcement approves wiping",
+      "The analyst is overly cautious — backup restoration takes priority; forensic analysis can happen on logs and network captures"
+    ],
+    "answer": 1,
+    "explanation": "Ransomware incident response requires balancing business recovery with forensic preservation. The resolution is both/and, not either/or: (1) Immediately acquire memory dumps (volatile evidence) from running systems; (2) Disk image affected systems (can be done while restoration is being prepared); (3) Begin restoration from validated backups; (4) Forensic analysis proceeds on images, not original systems. Wiping without forensics: misses the initial attack vector (may allow reinfection), prevents determination of data exfiltration (breach notification liability), destroys evidence for insurance claims (may void coverage), and eliminates information for law enforcement.",
+    "weakness": "Incident response, digital forensics, ransomware response",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://www.cisa.gov/stopransomware"]
+  },
+  {
+    "id": 7003,
+    "domain": 7,
+    "text": "An organization's Incident Response plan categorizes incidents by severity. A security analyst discovers that 100,000 customer records including names, addresses, and credit card numbers are accessible via a misconfigured cloud storage bucket. The bucket has been publicly accessible for 47 days. How should this be classified and what is the IMMEDIATE priority?",
+    "options": [
+      "Classify as Medium — the data exposure is now historical and the immediate security risk is limited",
+      "Classify as Critical Incident: immediately restrict the bucket access (zero-day remediation); preserve access logs to determine if data was actually accessed (not just theoretically accessible); initiate breach assessment — 47-day exposure of payment card data triggers PCI DSS incident response and likely breach notification; credit card data requires notification to card brands (Visa, Mastercard) and issuers; state breach notification laws (most require notification within 30-72 hours of confirmed breach, not discovery of the misconfiguration); engage legal counsel immediately",
+      "Classify as Low — no evidence of actual data access means this is a configuration issue, not a breach",
+      "Classify as High — document the finding and begin remediation planning for the next security sprint"
+    ],
+    "answer": 1,
+    "explanation": "47-day public exposure of credit card data is a Critical incident with multiple regulatory implications: (1) PCI DSS: credit card breach notification to card brands and acquirers must occur promptly; (2) State breach notification laws: most US states require notification within 30-72 days of confirmed breach discovery; (3) GDPR: if EU residents included, 72-hour supervisory authority notification required; (4) Access logs may show if data was accessed — but the absence of access logs doesn't mean no access occurred. The fact that the data 'could have been accessed' by anyone is typically sufficient for breach notification assessment. Immediate bucket restriction + forensic log analysis + legal engagement are all immediate actions.",
+    "weakness": "Incident classification, breach notification, PCI DSS incident response",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://www.pcisecuritystandards.org/document_library/"]
+  },
+  {
+    "id": 7004,
+    "domain": 7,
+    "text": "A forensic analyst is examining a Windows system suspected of being compromised. They need to collect digital evidence while preserving integrity. What is the CORRECT order of evidence collection based on Order of Volatility?",
+    "options": [
+      "Hard drive image → System logs → Memory dump → Network connections",
+      "CPU registers and cache → RAM/memory dump → Running processes and network connections → System logs → Hard drive image → Removable media; volatile data (memory, network connections, running processes) must be collected before powering off the system, as it is lost upon shutdown",
+      "Memory dump → Hard drive image → System logs → Network connections",
+      "Network packet capture → Hard drive image → Memory dump → System logs"
+    ],
+    "answer": 1,
+    "explanation": "RFC 3227 (Guidelines for Evidence Collection and Archiving) establishes the Order of Volatility from most to least volatile: (1) CPU registers, cache; (2) Routing table, ARP cache, process table, kernel statistics, RAM; (3) Temporary file systems; (4) Hard disk; (5) Remote logging and monitoring data; (6) Physical configuration, network topology; (7) Archival media. The key principle: collect most volatile data first because it is lost upon system shutdown. Memory forensics tools (Volatility, Magnet RAM Capture, WinPmem) collect RAM while the system is running, before hard drive imaging. Always document the chain of custody for each collection step.",
+    "weakness": "Digital forensics, order of volatility, evidence collection",
+    "references": ["https://www.rfc-editor.org/rfc/rfc3227", "https://www.nist.gov/pubs/sp/800/86/final"]
+  },
+  {
+    "id": 7005,
+    "domain": 7,
+    "text": "An organization's firewall change management process requires: formal request submission, security review within 48 hours, change approval by the Change Advisory Board (CAB) meeting weekly, and implementation by the firewall team. An incident response team needs an emergency firewall rule to block active attacker C2 communication. How should this be handled?",
+    "options": [
+      "Submit a formal change request and implement after the next CAB meeting — the change management process must be followed even in emergencies",
+      "Implement the emergency rule immediately using the pre-defined emergency change process (documented in the change management policy with post-implementation review within 24 hours); all formal change management policies should include an emergency/expedited track with: immediate implementation authority (IR team lead), concurrent notification (CISO, CAB chair), mandatory post-implementation review within 24 hours to formalize the change or reverse it if ineffective — active attacker scenarios cannot wait 7 days for the weekly CAB",
+      "Have the CISO call each CAB member individually and hold an emergency CAB via phone to approve the change",
+      "The IR team should bypass change management entirely — incident response has authority to make any system change during active incidents"
+    ],
+    "answer": 1,
+    "explanation": "Effective change management includes emergency procedures for time-critical situations. An active attacker C2 connection cannot wait 7 days for a standard CAB process — every minute of delay extends the compromise. Mature change management processes include: (1) Emergency change track with immediate implementation authority; (2) Concurrent notification to key stakeholders; (3) Mandatory post-implementation review; (4) Documentation of the emergency justification. Total bypass ('IR can change anything without documentation') creates audit and accountability problems. The emergency track maintains governance while accommodating operational urgency.",
+    "weakness": "Emergency change management, incident response vs change control",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 7006,
+    "domain": 7,
+    "text": "A forensic investigator is preserving digital evidence from a live server. They use the 'dd' command to image the hard drive. During the imaging process, the system receives new log entries. When the investigation concludes, how should the investigator address the authenticity question?",
+    "options": [
+      "The image is invalid — a live system write renders the entire forensic image inadmissible",
+      "Document the system's running state at the time of imaging using timestamps and log entries; hash the image immediately after creation (MD5 and SHA-256) to establish a cryptographic reference point; note in the forensic report that the system was live during imaging and subsequent writes occurred after the imaging process began; the pre-imaging data is preserved in the image; the write-blocker (hardware) should have been used to prevent writes during imaging — if not available on a live system, document the live acquisition methodology used (FTK Imager, dc3dd) and note that logs written during imaging are post-acquisition data",
+      "Delete all system logs written after the imaging process began — they contaminate the evidence",
+      "Re-image the system immediately after shutdown — the live image is unusable"
+    ],
+    "answer": 1,
+    "explanation": "Live forensic acquisition of running systems is sometimes necessary despite the write activity challenge. Best practices: (1) Use write-blocking hardware when possible; (2) For live acquisition: use tools designed for live imaging (FTK Imager, dc3dd with MD5 inline hashing) that log the acquisition process; (3) Document system state (running processes, network connections) BEFORE imaging; (4) Capture memory FIRST (most volatile); (5) Hash the image immediately on completion; (6) Document in the chain of custody that the system was live and writes occurred during acquisition — this is standard in live response forensics; (7) Courts understand live acquisition necessity when documented.",
+    "weakness": "Live forensic acquisition, chain of custody, evidence authentication",
+    "references": ["https://www.nist.gov/pubs/sp/800/86/final"]
+  },
+  {
+    "id": 7007,
+    "domain": 7,
+    "text": "An organization experiences a suspected insider threat incident. An employee in the finance department is suspected of exfiltrating customer financial records. The HR and Legal teams ask IT Security to preserve evidence while keeping the investigation confidential. What is the MOST critical principle for handling this investigation?",
+    "options": [
+      "Interview the suspected employee immediately to get their side of the story before preserving evidence",
+      "Preserve evidence covertly using legal authorities: (1) Preserve all electronic evidence (emails, file access logs, network logs, badge access) in a legally defensible manner with chain of custody documentation; (2) Do not confront the employee until evidence is preserved and legal/HR advises — confrontation may trigger evidence destruction; (3) Ensure the investigation follows HR policies and employment law (labor law varies by jurisdiction); (4) Maintain strict confidentiality — only those with need-to-know should know an investigation is occurring; (5) Engage employment attorney before any employee-facing action",
+      "Immediately revoke the employee's access — this protects the organization while investigation proceeds",
+      "Conduct a forensic image of the employee's workstation while they are at their desk to maintain transparency"
+    ],
+    "answer": 1,
+    "explanation": "Insider threat investigations require careful balance of security, legal, and HR requirements: (1) Evidence preservation first — confrontation before preservation risks destruction; (2) Legal authority — employment law requires specific procedures before adverse employment action; (3) Confidentiality — premature disclosure creates legal liability and evidence contamination risk; (4) Chain of custody — all evidence must be preserved with legal defensibility for potential prosecution or employment litigation; (5) Access revocation timing — premature revocation alerts the subject; timing must be coordinated with legal and HR; (6) Multiple stakeholder coordination — Security, HR, Legal, and potentially Law Enforcement must all be involved appropriately.",
+    "weakness": "Insider threat investigation, evidence preservation, legal considerations",
+    "references": ["https://www.nist.gov/pubs/sp/800/86/final", "https://www.cisa.gov/topics/physical-security/insider-threat-mitigation"]
+  },
+  {
+    "id": 7008,
+    "domain": 7,
+    "text": "A security operations center has developed an incident response playbook for ransomware. During a real incident, the team discovers that a critical step in the playbook (restoring from backup) cannot be executed because the backup system requires credentials that are only known to one employee who is on vacation and unreachable. What broader organizational failure does this illustrate?",
+    "options": [
+      "The vacation scheduling system failed — critical employees should not be allowed to take vacation simultaneously",
+      "This illustrates single points of failure in operational processes: (1) Critical recovery credentials must be escrowed in a secure, accessible location (password vault with emergency access procedures) rather than held by individuals; (2) Playbooks must be tested end-to-end — tabletop exercises would have revealed this dependency; (3) 'Bus factor' analysis should identify critical knowledge held by single individuals; (4) Emergency contacts and backup procedures must exist for every critical process; (5) Regular DR testing validates that documented procedures are actually executable by the available team",
+      "The incident response team failed — they should have memorized the backup system credentials",
+      "The backup system vendor is responsible — enterprise systems should not require individual-specific credentials"
+    ],
+    "answer": 1,
+    "explanation": "Single points of failure in recovery procedures are a critical BCP/DRP issue. This scenario reveals: (1) Critical credential dependency on a single person — password vault with break-glass access should hold all recovery credentials; (2) Untested playbook — end-to-end testing would have revealed the dependency before an incident; (3) Knowledge concentration risk (bus factor = 1 for backup recovery); (4) Emergency access procedures absent. Prevention: credential vault for all recovery credentials, succession planning for critical knowledge, regular tested exercises (not just tabletop walkthroughs), and cross-training for all critical recovery procedures.",
+    "weakness": "Single point of failure, BCP/DRP testing, credential management",
+    "references": ["https://www.nist.gov/pubs/sp/800/34/r1/final"]
+  },
+  {
+    "id": 7009,
+    "domain": 7,
+    "text": "A CISO receives a call from the FBI indicating that the organization's IP address has been identified as a source of outbound attacks against critical infrastructure. The attacks are occurring right now. What is the CORRECT sequence of actions?",
+    "options": [
+      "Immediately shut down all internet connectivity to stop the attacks — this is the fastest way to prevent further harm",
+      "Verify the FBI contact's identity and the notification through official channels; simultaneously initiate incident response to identify the compromised systems generating the attacks; implement targeted network controls to block the specific attack traffic without complete outage; preserve forensic evidence while containing the attack; coordinate with the FBI on the investigation — they may have additional intelligence about the attacker; assess legal obligations around protecting third parties from your compromised systems",
+      "Tell the FBI it cannot be your organization — your security program is robust and such an attack is impossible",
+      "Silently monitor the attacking traffic for 24 hours to gather intelligence before taking action"
+    ],
+    "answer": 1,
+    "explanation": "Receiving FBI notification of your systems being used for attacks requires immediate multi-track response: (1) Verify contact authenticity (call official FBI Cyber Division numbers, not numbers provided by the caller); (2) Internal IR activation — identify compromised systems generating attack traffic; (3) Targeted containment — block specific malicious traffic patterns (not complete internet shutdown which creates additional harm); (4) Evidence preservation for FBI investigation; (5) Legal obligations — organizations may have duty to stop attacks on third parties once aware; (6) Coordinated disclosure — work with FBI rather than unilaterally. Complete internet shutdown may destroy evidence and create significant business harm without stopping attacks that route through multiple systems.",
+    "weakness": "FBI coordination, incident response, law enforcement cooperation",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://www.cisa.gov/report-cybersecurity-incident"]
+  },
+  {
+    "id": 7010,
+    "domain": 7,
+    "text": "A digital forensics team is analyzing a suspected malware infection. Memory analysis using Volatility reveals a process named 'svchost.exe' running from C:\\Users\\user123\\AppData\\Local\\Temp\\svchost.exe with no parent process relationship to services.exe. Why is this suspicious and what does it indicate?",
+    "options": [
+      "This is normal — svchost.exe can run from any location if the user installed a legitimate Microsoft service",
+      "Multiple red flags indicate malware: (1) svchost.exe should always run from C:\\Windows\\System32\\svchost.exe — non-system32 location indicates masquerading; (2) Legitimate svchost.exe processes always have services.exe as parent — orphaned process or wrong parent indicates process injection or spawning; (3) Running from %AppData%\\Local\\Temp is a classic malware staging location; (4) Process masquerading (living off the land by mimicking legitimate system process names) is a common technique to evade detection; investigate: hash the binary against known-good, analyze loaded DLLs, examine network connections from the process",
+      "The file location indicates a Windows update that installed a legitimate svchost.exe — no investigation needed",
+      "svchost.exe from AppData indicates a ransomware staging process — immediately shut down the system"
+    ],
+    "answer": 1,
+    "explanation": "Process masquerading (T1036.005 in MITRE ATT&CK) uses legitimate process names to hide malicious code. Legitimate svchost.exe indicators: (1) Always in C:\\Windows\\System32\\ (or SysWOW64 for 32-bit); (2) Always parent process = services.exe; (3) Signed by Microsoft; (4) Specific command line: svchost.exe -k [ServiceGroupName]. When any of these differ: masquerading is indicated. Volatility commands: malfind (memory injection), pstree (process relationships), dlllist (loaded modules), handles (file and registry handles from the process), netscan (network connections). Hash the binary: compare to known-good Microsoft hash.",
+    "weakness": "Process masquerading, malware analysis, Volatility forensics",
+    "references": ["https://attack.mitre.org/techniques/T1036/005/", "https://volatilityfoundation.org/"]
+  },
+  {
+    "id": 7011,
+    "domain": 7,
+    "text": "An organization deploys a SIEM and wants to implement user behavior analytics (UBA) to detect insider threats. The data science team suggests using machine learning to baseline user behavior. After 90 days, the system generates 2,000 anomaly alerts daily. 95% prove to be false positives. What adjustment is MOST important?",
+    "options": [
+      "Replace the machine learning model — the current model cannot distinguish legitimate from malicious behavior",
+      "Refine the model with feedback loop and contextual enrichment: (1) Implement analyst feedback to label true/false positives (supervised learning improvement); (2) Add contextual data to reduce false positives (HR data for role/team, calendar data for meetings/travel, IT asset data for authorized systems); (3) Implement risk scoring rather than binary alerting — aggregate anomaly signals into risk scores, alerting only high-risk composite scores; (4) Define specific high-value detection use cases (data exfiltration, privilege escalation) rather than general anomaly detection",
+      "Disable the UBA system — the false positive rate makes it counterproductive",
+      "Increase the anomaly detection threshold to reduce alerts — the system is too sensitive"
+    ],
+    "answer": 1,
+    "explanation": "ML-based UBA generating 95% false positives indicates the model needs enrichment and feedback, not replacement. The core issues: (1) Insufficient context — anomalies without context are meaningless; a user downloading 1GB of data is anomalous unless it's their normal backup job; (2) Lack of feedback loop — unsupervised models don't improve without analyst input; (3) Binary alerting — every anomaly generates an alert rather than contributing to a risk score; (4) Broad detection — looking for all anomalies rather than specific threat indicators. Solution: enrich with context, implement feedback-driven learning, risk-score aggregation, and targeted use case definition.",
+    "weakness": "UBA, machine learning security, false positive reduction",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 7012,
+    "domain": 7,
+    "text": "A SOC analyst observes that a compromised account is being used to run encoded PowerShell commands: powershell.exe -EncodedCommand [base64string]. The analyst decodes the base64 and finds it connects to an IP and downloads an additional payload. What MITRE ATT&CK techniques does this represent and what is the immediate response?",
+    "options": [
+      "This is T1059 (Command and Scripting Interpreter) only — block PowerShell to prevent further execution",
+      "Multiple ATT&CK techniques: T1059.001 (PowerShell) — command interpreter; T1027 (Obfuscation) — base64 encoding to evade detection; T1105 (Ingress Tool Transfer) — downloading additional payload; T1071 (Application Layer Protocol) — using HTTP/S for C2; immediate response: (1) Isolate the affected system immediately; (2) Block outbound connection to the identified IP at firewall; (3) Capture the downloaded payload for analysis; (4) Search for the PowerShell execution across all endpoints (lateral movement check); (5) Preserve forensic evidence before containment changes",
+      "Block all PowerShell execution organization-wide — this technique cannot be used if PowerShell is disabled",
+      "Wait for the payload to execute to understand the full attack scope before responding"
+    ],
+    "answer": 1,
+    "explanation": "Multi-technique ATT&CK mapping for response prioritization: Encoded PowerShell (T1059.001 + T1027) + payload download (T1105) indicates active malware staging — not a completed attack but an ongoing compromise. Response priorities: (1) System isolation prevents lateral movement and payload execution; (2) IP blocking at firewall prevents C2 communication organization-wide; (3) Endpoint-wide PowerShell execution search finds other compromised systems (threat hunting); (4) Payload analysis determines the next attack stage and additional IOCs; (5) Evidence preservation ensures forensic capability. CONSTRAINED LANGUAGE MODE for PowerShell and PowerShell Script Block Logging are important preventive controls.",
+    "weakness": "MITRE ATT&CK, PowerShell security, incident response",
+    "references": ["https://attack.mitre.org/", "https://www.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 7013,
+    "domain": 7,
+    "text": "An organization's incident response plan states that all security incidents must be reported to the CISO within 1 hour of detection. A SOC analyst detects a potential incident at 11 PM on a Friday and waits until Monday morning to report it because 'it can wait for normal business hours.' What is the most significant risk created by this decision?",
+    "options": [
+      "Administrative risk — the analyst violated the reporting SLA policy",
+      "Operational risk of uncontrolled attacker dwell time: a 60-hour delay in incident reporting allows an active attacker to: establish additional persistence mechanisms, escalate privileges further, exfiltrate additional data, spread laterally to additional systems, and cover tracks more completely; the 1-hour reporting SLA exists precisely to minimize attacker dwell time; breach notification obligations may also be triggered by the delay — GDPR requires notification within 72 hours, which the delay may have allowed to expire without notification",
+      "The analyst's judgment may be correct — not all potential incidents require immediate after-hours escalation",
+      "The CISO's availability is the real problem — a backup contact for after-hours notifications should have been designated"
+    ],
+    "answer": 1,
+    "explanation": "Incident reporting delays create compounding risk. Each hour of undetected/unreported compromise allows attackers to: expand access, establish harder-to-detect persistence, exfiltrate more data, and destroy evidence. IBM Cost of Data Breach Report shows incidents with longer dwell times have significantly higher breach costs. Additionally, regulatory implications: GDPR 72-hour notification clock starts from breach awareness — a 60-hour delay on a Friday could exhaust notification time by Monday. The 1-hour SLA exists for both operational (contain quickly) and regulatory (notification timelines) reasons. All incident response plans should have 24/7 on-call escalation procedures.",
+    "weakness": "Incident reporting SLA, breach notification timing, attacker dwell time",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://gdpr.eu/article-33-notification-of-personal-data-breach-to-the-supervisory-authority/"]
+  },
+  {
+    "id": 7014,
+    "domain": 7,
+    "text": "After responding to a major ransomware incident, the IR team conducts a lessons-learned session. The findings show: the initial infection vector was a phishing email with a malicious macro, detection took 22 days, and the backup system's most recent validated backup was 6 weeks old. Which finding MOST critically impacts recovery capability?",
+    "options": [
+      "The phishing detection failure — preventing initial infection should be the primary remediation focus",
+      "The 6-week-old backup is the most critical recovery finding: a 6-week Recovery Point Objective (RPO) means the organization lost 6 weeks of data during recovery — the actual RPO far exceeded the likely documented RPO requirement; while detection time (22 days) is concerning, backup age directly determines data loss magnitude; ransomware attackers increasingly target and encrypt/delete backups before triggering encryption — discovering backup validation had not been current indicates a systemic backup program failure; immediately remediate: test and validate current backups, implement backup integrity monitoring, and achieve documented RPO targets",
+      "The 22-day detection time — this is the longest phase and offers the most improvement potential",
+      "All three findings are equally critical and must be addressed simultaneously"
+    ],
+    "answer": 1,
+    "explanation": "Recovery capability is fundamental to ransomware defense. The 6-week backup age: (1) Data loss of 6 weeks is typically catastrophic for business operations; (2) An RPO of 6 weeks is almost certainly violated relative to the organization's documented requirements; (3) Backup validation failure is a systemic program failure — not just this incident; (4) Modern ransomware specifically targets backup systems before triggering encryption (ALPHV, LockBit). Prevention and detection improvements reduce likelihood, but backup integrity is the last line of defense that determines recovery capability. All findings need remediation, but backup recovery capability has the most direct operational impact on future incident outcomes.",
+    "weakness": "Lessons learned, backup validation, RPO requirements",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final", "https://www.cisa.gov/stopransomware"]
+  },
+  {
+    "id": 7015,
+    "domain": 7,
+    "text": "A security operations team is implementing threat hunting. The threat hunting lead defines the team's approach as 'looking for alerts that weren't generated.' A skeptical executive asks how this differs from their existing SIEM operations and whether it justifies the additional cost. How should the hunting lead respond?",
+    "options": [
+      "Threat hunting is the same as SIEM operations — the executive is correct to question the redundancy",
+      "Threat hunting is hypothesis-driven, proactive investigation that assumes breach and looks for attacker behavior that existing detections miss: SIEM operations are reactive (alert → investigate) and only detect threats within the ruleset; threat hunting proactively investigates using ATT&CK techniques, threat intelligence, and analyst expertise to find attackers who have evaded detection; the value proposition: the average dwell time before detection is 16+ days (IBM 2023) — threat hunting specifically targets that dwell period; findings from successful hunts directly improve detection rules, reducing future dwell time",
+      "Threat hunting and SIEM operations should not be compared — they operate on different data sources",
+      "Threat hunting replaces SIEM operations in mature organizations — the executive should reallocate the SIEM budget"
+    ],
+    "answer": 1,
+    "explanation": "Threat hunting vs. SIEM operations distinction is important for executive communication. SIEM/alerting: known threat patterns → automated detection → analyst investigation. Threat hunting: hypothesis (e.g., 'assume Cobalt Strike is present') → proactive investigation → discover what alerts didn't fire. Hunting value: (1) Finds attackers in the 16+ day dwell period before detection; (2) Produces new detection rules (detection engineering) improving SIEM coverage; (3) Exercises analyst skills and ATT&CK knowledge; (4) Validates that existing detections work (or reveals they don't). The two are complementary — hunting improves alerting by finding gaps. ROI: hours of hunting that discover an active attacker may prevent a breach costing millions.",
+    "weakness": "Threat hunting, detection engineering, SIEM vs. hunting",
+    "references": ["https://attack.mitre.org/", "https://www.threathunting.net/"]
+  },
+  {
+    "id": 7016,
+    "domain": 7,
+    "text": "A large enterprise's patch management process shows that critical security patches take an average of 45 days to deploy across all systems. The CISO is concerned this exceeds the 30-day SLA policy. The patch management team argues that complex enterprise change management, testing requirements, and system dependencies make 30 days impossible for all systems. What is the MOST appropriate resolution?",
+    "options": [
+      "Lower the SLA requirement to 45 days to align policy with operational reality",
+      "Implement a tiered patching approach with risk-based SLAs: (1) Internet-facing systems and critical infrastructure: 7 days for Critical, 14 days for High; (2) Standard enterprise systems: 14-30 days for Critical; (3) Complex/legacy systems with testing requirements: risk acceptance with compensating controls for systems requiring extended testing — document each exception with risk level and compensating controls; this balances operational reality with risk management while holding critical systems to tighter SLAs",
+      "Accept the 45-day average since the policy is aspirational and not practically enforceable",
+      "Require all vendors to provide pre-tested patches — vendor testing should reduce internal testing requirements to 7 days"
+    ],
+    "answer": 1,
+    "explanation": "A flat 30-day SLA for all systems fails to account for operational complexity and risk differentiation. Tiered SLAs are the industry best practice: (1) Tier 1 (internet-facing, critical systems): tightest SLAs — these are highest risk if unpatched; (2) Tier 2 (internal critical systems): moderate SLAs with change management; (3) Tier 3 (complex/legacy systems with testing requirements): extended windows with documented compensating controls and formal risk acceptance. This approach: focuses urgency where risk is highest, accounts for operational reality for complex systems, and creates defensible audit trails for exceptions. Compliant with CISA emergency directives which use tiered timing by severity and internet exposure.",
+    "weakness": "Patch management SLA, tiered risk-based patching, change management",
+    "references": ["https://www.nist.gov/pubs/sp/800/40/r4/final", "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"]
+  },
+  {
+    "id": 7017,
+    "domain": 7,
+    "text": "During incident response, a forensic analyst discovers encrypted files in a hidden directory on a web server. The files were created 3 months ago and haven't been accessed since. The encryption appears to be AES-256. What should the analyst consider about these files?",
+    "options": [
+      "Encrypted files on a web server are normal — web servers commonly store encrypted configuration files",
+      "The characteristics suggest a potential compromise artifact: (1) 3-month-old encrypted files that match the potential breach timeline require investigation; (2) Hidden directory placement suggests intentional concealment; (3) AES-256 encrypted files on a web server don't match normal web server operations; (4) Possible scenarios: stolen data stored pending exfiltration, attacker's encrypted C2 communications/tools, encrypted backdoor payload; (5) Analysis approach: correlate creation timestamp with other incident indicators, check file entropy (high entropy = encrypted/compressed), examine web server logs from that date, determine network connections originating from the server around that time",
+      "Immediately delete the encrypted files — they serve no legitimate purpose on a web server",
+      "The files are benign — encrypted files cannot be used for malicious purposes since they require decryption keys"
+    ],
+    "answer": 1,
+    "explanation": "Encrypted files in hidden directories on web servers are significant forensic findings. Correlation with timeline is critical: if the files were created around the suspected breach date, they are potentially related artifacts. Interpretation scenarios: (1) Data staging — attacker encrypted exfiltration data before transfer; (2) Tool storage — encrypted attacker tools to evade antivirus scanning; (3) Webshell — encrypted PHP/ASP webshell that decrypts and executes on demand; (4) Ransomware staging — encrypted final payload. Analysis approach: file entropy analysis (encrypted files show near-maximum entropy), header analysis, timeline correlation with web server access logs, and network forensics from the creation period.",
+    "weakness": "Web server forensics, encrypted file analysis, timeline correlation",
+    "references": ["https://www.nist.gov/pubs/sp/800/86/final"]
+  },
+  {
+    "id": 7018,
+    "domain": 7,
+    "text": "A critical application is being migrated to a new server. The project team asks the security team to complete a risk assessment and security review 'quickly' before go-live scheduled in 2 days. The security team discovers multiple High and Critical vulnerabilities in the new server configuration. What is the MOST appropriate action?",
+    "options": [
+      "Complete the risk assessment and provide the findings — the project team will decide whether to proceed",
+      "Document the Critical and High findings with recommended remediations; formally advise the project team and their management that proceeding with identified Critical vulnerabilities creates unacceptable risk; if management proceeds over security objection, ensure formal risk acceptance is documented by an executive with appropriate authority — the security team's role is to provide risk information and advice; the project team/business owner has accountability for the go/no-go decision, but that decision must be formally documented as risk acceptance",
+      "Block the migration — security teams have authority to prevent go-lives with unresolved critical vulnerabilities",
+      "Perform a limited emergency remediation in 2 days and approve the migration — critical applications cannot miss go-live dates"
+    ],
+    "answer": 1,
+    "explanation": "Security's role in project governance is advisory and escalation — not unilateral block authority in most organizational governance models. The CISO/security team: (1) Documents findings objectively with risk ratings; (2) Recommends remediation and possibly delay; (3) Escalates to appropriate management if risk is severe; (4) Ensures formal risk acceptance documentation if management proceeds; (5) Documents their advice and management's decision. Unilateral project blocking without organizational authority creates governance conflict. However, security must ensure the decision-maker has full information about the risk they're accepting. The formal risk acceptance documentation protects the security team from accountability for outcomes of decisions they advised against.",
+    "weakness": "Security governance in project management, risk acceptance, escalation",
+    "references": ["https://www.nist.gov/pubs/sp/800/30/r1/final"]
+  },
+  {
+    "id": 7019,
+    "domain": 7,
+    "text": "An organization's network operations center detects a 300% spike in outbound DNS traffic from a specific internal subnet. The traffic consists of many short queries to seemingly random subdomains of a single external domain (e.g., a8f3c2.attacker.com, b7d9e1.attacker.com). What attack is this most consistent with and what is the recommended containment action?",
+    "options": [
+      "DNS amplification DDoS — the internal systems are being used to attack the external domain",
+      "DNS tunneling for data exfiltration: encoding data as subdomains of an attacker-controlled domain, using DNS queries to exfiltrate data that traverses firewall rules allowing DNS; the random-looking subdomains contain encoded exfiltrated data; the single external domain is the attacker's DNS server that decodes the subdomain data; containment: (1) Block outbound DNS to all external resolvers except corporate DNS; (2) Implement DNS-based monitoring/sinkholes for the specific domain; (3) Block the identified attacker domain at DNS level; (4) Isolate the affected subnet while investigating",
+      "DNS cache poisoning attack — the attacker is injecting malicious DNS entries into the corporate cache",
+      "Botnet recruitment — the internal systems are communicating with the botnet command server"
+    ],
+    "answer": 1,
+    "explanation": "DNS tunneling (T1071.004 in MITRE ATT&CK) encodes data in DNS query subdomain labels. DNS queries (UDP 53) often traverse firewalls even when other protocols are blocked. Pattern indicators: (1) Unusually high DNS query volume from specific subnet; (2) Long, random-appearing subdomain labels (base64/base32 encoded data); (3) All queries to a single external domain; (4) Queries that return minimal or no meaningful DNS responses. Tools: iodine, dns2tcp, DNScat2. Detection: DNS query length analysis (legitimate domains have short subdomains), query rate analysis per source, entropy analysis of subdomain labels. The data is being exfiltrated through the DNS protocol itself.",
+    "weakness": "DNS tunneling, covert channel detection, data exfiltration",
+    "references": ["https://attack.mitre.org/techniques/T1071/004/"]
+  },
+  {
+    "id": 7020,
+    "domain": 7,
+    "text": "A security team is evaluating whether to implement automated threat response (SOAR — Security Orchestration, Automation, and Response) capabilities. The team is concerned about automated actions causing unintended damage. Which approach BEST balances automation benefits with risk management?",
+    "options": [
+      "Implement full automation for all threat responses — speed is more important than human oversight",
+      "Implement tiered automation based on confidence and impact: (1) High confidence, low-impact actions (IP blacklisting, account suspension confirmation request) can be fully automated; (2) Medium confidence or higher impact (isolating a server, blocking a subnet) should use human-in-the-loop — SOAR prepares the action, human approves with 1-click; (3) High-impact actions (disabling critical system, blocking internet) require multi-person approval; (4) All automated actions must be logged, reversible where possible, and regularly reviewed for false positives",
+      "Implement SOAR only for alert routing and ticketing — no automated remediation",
+      "Avoid SOAR entirely — automated responses create liability issues when they cause unintended damage"
+    ],
+    "answer": 1,
+    "explanation": "SOAR automation risk management requires tiering based on action confidence and business impact. Fully automated responses are appropriate for well-understood, high-confidence, reversible, low-impact actions: (1) Blocking a known-malicious IP from a threat feed; (2) Adding a file hash to an EDR blocklist; (3) Locking a user account after confirmed credential stuffing. Human-in-the-loop for uncertain or higher-impact actions maintains security team judgment for nuanced decisions. All automated actions need: comprehensive logging, reversibility where possible, regular tuning based on false positive analysis, and exception handling for critical systems that should not be automatically isolated.",
+    "weakness": "SOAR, automation risk management, human-in-the-loop",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 7021,
+    "domain": 7,
+    "text": "An organization receives a ransom note indicating that an attacker has exfiltrated 500GB of sensitive customer data and will publish it unless $2 million is paid within 48 hours. The attacker provides a sample of 10,000 records as proof. What factors should the organization's leadership consider when making the ransom decision?",
+    "options": [
+      "Pay the ransom immediately — $2 million is less than the cost of a data breach",
+      "Multiple factors must be analyzed before any ransom decision: (1) OFAC sanctions — paying ransomware groups on OFAC SDN list may constitute a sanctions violation (federal crime); consult legal immediately; (2) Payment does not guarantee data deletion — attacker may publish anyway or sell data; (3) Payment incentivizes future attacks; (4) Cyber insurance policy terms — most require insurer notification before payment; (5) Law enforcement notification (FBI discourages payment but provides resources); (6) Independent verification of whether data was actually exfiltrated (validate the sample); (7) Legal and regulatory obligations triggered by the breach regardless of payment decision",
+      "Never pay the ransom — payment is always morally wrong regardless of business impact",
+      "Pay the ransom immediately but simultaneously restore from backups to minimize business impact"
+    ],
+    "answer": 1,
+    "explanation": "Ransomware payment decisions involve complex legal, ethical, and operational factors: (1) OFAC SDN compliance — US Treasury OFAC has identified many ransomware groups; payments to sanctioned entities are federal crimes; legal must review; (2) No guarantee — threat actors routinely take payment and still publish data; (3) FBI/CISA recommend against payment and provide alternatives; (4) Cyber insurance must be notified before payment — policies often have specific requirements; (5) Breach notification obligations exist regardless of payment; (6) Payment decisions require C-suite and board involvement with legal counsel. The decision is ultimately a business decision with legal constraints, not a simple cost/benefit calculation.",
+    "weakness": "Ransomware payment decision, OFAC compliance, cyber insurance",
+    "references": ["https://www.cisa.gov/stopransomware", "https://ofac.treasury.gov/recent-actions/20201001"]
+  },
+  {
+    "id": 7022,
+    "domain": 7,
+    "text": "A security team implements a jump server (bastion host) for all administrative access to production systems. An audit discovers that jump server logs are not being monitored and that administrators have configured SSH tunnels that bypass the jump server. What risks do these findings create?",
+    "options": [
+      "These are minor configuration issues — jump servers provide sufficient security even without monitoring",
+      "Two critical control failures: (1) Unmonitored jump server logs eliminate the audit trail and session recording capability that is the primary security benefit of the jump server — administrators can perform any actions without oversight; (2) SSH tunnel bypass allows administrators to access production systems directly, rendering the jump server ineffective as an access control point; both findings together mean: administrators have unrestricted, unmonitored direct access to production systems — the jump server provides no actual security benefit in this configuration",
+      "SSH tunnels are a legitimate technical tool — restricting them may impede legitimate administrative tasks",
+      "The audit finding is a compliance issue only — the actual security risk is low since the administrators are trusted"
+    ],
+    "answer": 1,
+    "explanation": "Jump server (bastion host) security requires: (1) All administrative traffic MUST flow through it — bypass defeats its purpose entirely; (2) Session logging and recording must be comprehensive and monitored — the primary security benefit is accountability; (3) Jump server itself must be hardened. When both controls fail simultaneously: no access control (bypass), no accountability (no monitoring) = trusted-insider-equivalent access for all administrators from any location. SSH tunnel bypass is typically accomplished by opening port 22 on production servers to any source, or by forwarding local ports through allowed connections — remediation requires strict egress rules on production systems (only jump server can reach SSH port) and active monitoring.",
+    "weakness": "Jump server security, privileged access controls, SSH tunnel bypass",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 7023,
+    "domain": 7,
+    "text": "A healthcare organization's incident response team must determine if an incident involving potential PHI disclosure triggers HIPAA breach notification requirements. The incident involved unauthorized access to a database containing 50,000 patient records but the attacker's activity was limited to query logging rather than data export. What is the correct assessment framework?",
+    "options": [
+      "No breach notification required — no data was exported from the database",
+      "HIPAA's 'low probability of compromise' 4-factor test determines if breach notification is required: (1) Nature and extent of PHI involved (50,000 records × sensitivity of fields); (2) Who accessed the PHI (unauthorized actor); (3) Whether PHI was actually acquired or viewed (query logging is ambiguous — must determine if attacker reviewed query results); (4) Extent of risk mitigation; unauthorized access to a database containing PHI triggers the breach analysis — the fact that no 'export' occurred does not automatically mean no 'acquisition'; if the attacker could read query results, PHI may have been accessed; the organization bears burden of proving low compromise probability",
+      "HIPAA only requires notification for breaches affecting more than 100,000 individuals — 50,000 is below the threshold",
+      "Query access to a database is not a HIPAA breach — only physical copying of files triggers notification requirements"
+    ],
+    "answer": 1,
+    "explanation": "HIPAA breach notification uses the 4-factor low-probability-of-compromise test to determine if notification is required. The burden is on the organization to demonstrate compromise is unlikely — unauthorized access to PHI creates a presumptive breach requiring notification unless the 4-factor test is satisfied. Query logging alone doesn't answer whether data was viewed — if the attacker could retrieve query results, PHI was accessed. Critical point: 'acquisition' in HIPAA includes viewing/reading, not just copying/exporting. The organization must demonstrate that results were not viewable (e.g., only metadata logged, no results returned). 500+ individuals triggers Secretary of HHS notification; 500+ in a single state may trigger state AG notification.",
+    "weakness": "HIPAA breach notification, 4-factor test, PHI breach assessment",
+    "references": ["https://www.hhs.gov/hipaa/for-professionals/breach-notification/index.html"]
+  },
+  {
+    "id": 7024,
+    "domain": 7,
+    "text": "A security team discovers that a terminated employee's Active Directory account was not disabled until 17 days after their last working day. During this period, the account was used 3 times from an IP address not associated with company resources. What is the MOST important immediate action and subsequent investigation priority?",
+    "options": [
+      "Disable the account and document the finding as a process failure — no further investigation is needed if access was limited to 3 times",
+      "Disable the account immediately; then investigate: (1) All three access events' source IPs, times, and activities performed; (2) Determine if the activity was the former employee (who may have retained credentials) or a third party (indicating credential theft or sale); (3) What resources were accessed and whether any data was exfiltrated; (4) Whether the former employee had any pending disputes or motives; (5) Legal hold may apply if data was accessed; (6) Breach notification assessment if any sensitive data was accessed; the three unexplained accesses are potential security incidents requiring full investigation",
+      "Send an email to the former employee asking them to confirm or deny the access events",
+      "The 3 accesses over 17 days are below the threshold for investigation — document as a process control failure and focus on preventing future occurrence"
+    ],
+    "answer": 1,
+    "explanation": "Post-termination account access by unauthorized parties is a security incident requiring full investigation, not just process remediation. Three accesses from non-company IPs suggest: (1) The terminated employee retained access and self-accessed (unauthorized access post-employment is a legal matter); (2) Credentials were shared with a third party; (3) Credentials were compromised and used by a threat actor. Investigation priorities: (1) Source IP geolocation, ASN, and reputation analysis; (2) Complete activity log for all three sessions (every command, file access, download); (3) Corporate investigation procedures (coordination with Legal/HR); (4) Data exfiltration assessment (any files downloaded?); (5) Breach notification if sensitive data was accessed.",
+    "weakness": "Terminated employee access, identity lifecycle, unauthorized access investigation",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final", "https://www.cisa.gov/topics/physical-security/insider-threat-mitigation"]
+  },
+  {
+    "id": 7025,
+    "domain": 7,
+    "text": "A security team is implementing a threat intelligence program. They have access to three threat intelligence feeds: (1) Free open-source feed with 6-month-old indicators; (2) Premium commercial feed with real-time indicators relevant to their industry; (3) ISAC (Information Sharing and Analysis Center) feed with peer organization intelligence. How should they evaluate and prioritize these feeds?",
+    "options": [
+      "Use only the commercial feed — paid intelligence is always higher quality than free or collaborative sources",
+      "Evaluate each feed based on: (1) Timeliness — 6-month-old indicators may describe active threats that have since moved infrastructure; (2) Relevance — industry-specific ISAC intelligence is highly relevant; commercial real-time feeds provide broad current coverage; (3) Confidence/accuracy — compare feed's false positive rate against your own detections; (4) Operational integration — can you ingest and act on the intelligence in your SIEM/EDR? Recommended: ISAC (peer relevance, trusted sharing community) + commercial (real-time breadth) are highest priority; historical open-source can supplement for research; no single feed is sufficient — triangulated intelligence improves accuracy",
+      "Use all three feeds with equal weight — more intelligence is always better",
+      "ISAC feeds require sharing your own intelligence — prioritize the commercial feed to avoid disclosing organizational information"
+    ],
+    "answer": 1,
+    "explanation": "Threat intelligence feed evaluation criteria: (1) Timeliness — threat actor infrastructure changes frequently; 6-month-old IOCs may generate false positives or misses; (2) Relevance — ISAC feeds from sector peers report threats specifically targeting your industry; (3) Accuracy/fidelity — feeds with high false positive rates create alert fatigue; (4) Coverage — commercial feeds provide broader coverage than sector-specific ISAC; (5) Integration — intelligence only provides value when operationalized in security tools; (6) ISAC sharing is typically bilateral — contributing intelligence and receiving industry-specific intelligence is the model; this is generally beneficial, not a risk. Multi-feed strategy with deduplication and confidence scoring provides the best intelligence posture.",
+    "weakness": "Threat intelligence program, feed evaluation, ISAC participation",
+    "references": ["https://www.cisa.gov/topics/cyber-threats-and-advisories/information-sharing", "https://www.first.org/"]
+  }
+]

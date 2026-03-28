@@ -1,0 +1,377 @@
+[
+  {
+    "id": 2001,
+    "domain": 2,
+    "text": "A hospital is migrating its Electronic Health Record (EHR) system to a cloud provider. During asset classification, the team must determine the classification level for various data types. Patient medication records, billing information, and de-identified research data are all involved. Which classification approach BEST aligns with HIPAA and industry practice?",
+    "options": [
+      "All hospital data should be classified as 'Confidential' uniformly to simplify security controls and ensure maximum protection",
+      "Patient medication records: Protected Health Information (PHI) — highest protection; Billing with PHI elements: PHI; De-identified data meeting HIPAA Safe Harbor standard: not PHI, lower classification — each class requires distinct controls mapped to its risk level",
+      "Use a three-tier classification: Public, Internal, Secret — map PHI to Secret and all other data to Internal",
+      "HIPAA does not require data classification — it only requires encryption at rest and in transit for all data"
+    ],
+    "answer": 1,
+    "explanation": "HIPAA defines PHI specifically — 18 identifiers tied to health information. Proper classification recognizes that: (1) Patient records with identifiers = PHI requiring full HIPAA safeguards, (2) Billing data with PHI elements = PHI, (3) Properly de-identified data under HIPAA Safe Harbor or Expert Determination = not PHI, enabling research use with fewer controls. Generic classifications ('Confidential') don't map to regulatory requirements. Each class needs distinct controls.",
+    "weakness": "Data classification, HIPAA PHI categorization",
+    "references": ["https://www.hhs.gov/hipaa/for-professionals/privacy/special-topics/de-identification/index.html"]
+  },
+  {
+    "id": 2002,
+    "domain": 2,
+    "text": "A financial institution is retiring 500 laptops. The drives contain customer financial records, employee PII, and internal financial models. The IT manager proposes using the built-in Windows 'Reset and Remove Everything' function for data sanitization. As the security officer, what is your assessment?",
+    "options": [
+      "Windows Reset is sufficient — it overwrites all data sectors making recovery impossible with standard tools",
+      "This approach is inadequate for data containing regulated information; NIST SP 800-88 requires cryptographic erasure for SSDs or secure overwrite for HDDs verified by a certificate of destruction; Windows Reset does not meet this standard for media leaving organizational control",
+      "Physically destroying the laptops is the only acceptable method for drives containing financial records",
+      "Windows Reset is acceptable if combined with full-disk encryption — the encrypted data cannot be recovered without the key"
+    ],
+    "answer": 1,
+    "explanation": "NIST SP 800-88 Rev 1 defines three sanitization methods: Clear (logical overwrite), Purge (cryptographic erase or physical), and Destroy. For media leaving organizational control containing regulated data (PCI DSS, GRAMM-LEACH-BLILEY), Windows Reset is not a documented sanitization method and does not provide verification. Organizations need a documented process with certificates of destruction and audit trail for compliance. For SSDs, cryptographic erasure (ATA Secure Erase or built-in encryption key deletion) meets Purge standard.",
+    "weakness": "Media sanitization, NIST SP 800-88, data disposal",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/88/r1/final"]
+  },
+  {
+    "id": 2003,
+    "domain": 2,
+    "text": "An organization's data classification policy identifies five levels. A new employee receives a document marked 'Restricted — Encrypt in Transit and at Rest.' They need to email it to an approved vendor. Their email client only supports TLS 1.1. What is the CORRECT action?",
+    "options": [
+      "Send the email using TLS 1.1 — any TLS version satisfies the 'encrypt in transit' requirement",
+      "Do not send via email with TLS 1.1; TLS 1.1 is deprecated (RFC 8996) and does not meet modern encryption standards for Restricted data; use an approved secure file transfer method (SFTP, secure portal, or email with end-to-end encryption) that meets current cryptographic standards",
+      "Compress the file with a password before attaching and send via TLS 1.1 — the compression password adds a layer of protection",
+      "Request an exception to the policy and send via unencrypted email to the vendor with a confidentiality notice in the email body"
+    ],
+    "answer": 1,
+    "explanation": "TLS 1.1 was officially deprecated by RFC 8996 (March 2021) due to known vulnerabilities. NIST SP 800-52 Rev 2 requires TLS 1.2 minimum (TLS 1.3 preferred) for federal systems. Many compliance frameworks (PCI DSS, HIPAA) prohibit deprecated protocols. The employee must use an alternative transmission method that meets current cryptographic standards. Password-compressed files do not satisfy the 'encrypt in transit' requirement — they are encrypted files sent in cleartext transit.",
+    "weakness": "Data handling procedures, cryptographic standards, TLS requirements",
+    "references": ["https://www.rfc-editor.org/rfc/rfc8996", "https://csrc.nist.gov/pubs/sp/800/52/r2/final"]
+  },
+  {
+    "id": 2004,
+    "domain": 2,
+    "text": "A company performs a data inventory and discovers 15TB of customer data in an S3 bucket that has no owner documented and was created 4 years ago by an employee who has since left. The data appears to be customer analytics from a discontinued product line. What is the MOST appropriate response?",
+    "options": [
+      "Immediately delete the data since it belongs to a discontinued product and has no current business use",
+      "Apply the default classification level and continue monitoring until ownership can be determined",
+      "Immediately restrict access to the bucket, initiate a data ownership investigation with Legal and the former product team, conduct privacy impact assessment to determine if retention/deletion obligations apply, document findings, and make a governance-based disposal or retention decision",
+      "Transfer ownership to the current IT security team as default data custodian for all unowned data assets"
+    ],
+    "answer": 2,
+    "explanation": "Unowned data with regulatory implications (customer data potentially covered by GDPR, CCPA, COPPA depending on the data) cannot be arbitrarily deleted or retained without governance process. Immediate deletion could destroy data required by legal hold. Continued storage without governance violates data minimization principles. Proper approach: restrict access (security control), investigate ownership and purpose (governance), assess regulatory obligations (compliance), make documented disposition decision.",
+    "weakness": "Data ownership, privacy impact assessment, data governance",
+    "references": ["https://www.nist.gov/privacy-framework"]
+  },
+  {
+    "id": 2005,
+    "domain": 2,
+    "text": "An organization classifies assets using a four-tier system. A security architect argues that 'data classification should be determined by the data's sensitivity, not by its container.' A sysadmin argues 'all data on servers in the DMZ should be classified as Public.' Which position is correct and why?",
+    "options": [
+      "The sysadmin is correct — location-based classification is simpler to implement and audit",
+      "The security architect is correct — classification follows the inherent sensitivity of the data itself; a DMZ server might legitimately store restricted data (e.g., encrypted customer records in a web application), and classification must be data-centric not container-centric to properly drive appropriate controls",
+      "Both approaches should be combined: data is classified by sensitivity but overridden to Public if stored in the DMZ",
+      "The sysadmin is correct for legacy systems; the architect is correct for modern cloud environments"
+    ],
+    "answer": 1,
+    "explanation": "Data classification is inherently data-centric — the sensitivity of the information determines its classification, independent of where it resides. Location-based classification fails when: sensitive data legitimately exists in less-secure locations (e.g., encrypted PII in a web-facing database), data moves between systems (classification shouldn't change based on transit), or a single system contains mixed-classification data. The controls applied may differ by location, but the classification label travels with the data.",
+    "weakness": "Data classification principles, data-centric security",
+    "references": ["https://www.nist.gov/pubs/sp/800/60/v1/r1/final"]
+  },
+  {
+    "id": 2006,
+    "domain": 2,
+    "text": "A law firm's records management policy requires that client matter files be retained for 7 years after case closure. A partner wants to delete files from a closed case that is currently under a regulatory investigation. The IT manager says the regulatory hold supersedes the retention policy. Is this correct?",
+    "options": [
+      "No — the firm's own records management policy takes precedence over external regulatory requirements",
+      "Yes — a legal/regulatory hold (litigation hold) creates an obligation that supersedes normal retention/destruction schedules; the data must be preserved until the hold is lifted regardless of policy timelines",
+      "Only court-issued subpoenas create preservation obligations; a regulatory investigation notice does not require hold",
+      "The partner, as data owner, has authority to delete data regardless of regulatory investigation status"
+    ],
+    "answer": 1,
+    "explanation": "Litigation and regulatory holds are legal obligations that override normal records management schedules. Destroying records subject to a regulatory investigation can constitute obstruction of justice, contempt, or spoliation of evidence — creating severe legal liability. The Federal Rules of Civil Procedure and equivalent regulations require organizations to implement legal holds immediately upon notice of potential litigation or regulatory investigation. The IT manager is correct — the hold supersedes the 7-year policy.",
+    "weakness": "Records retention, legal hold, regulatory compliance",
+    "references": ["https://www.justice.gov/jm/jm-9-16000-documentary-records"]
+  },
+  {
+    "id": 2007,
+    "domain": 2,
+    "text": "During a privacy impact assessment for a new HR analytics tool, you discover the tool will process employee behavioral data (keystrokes, application usage, website visits, email metadata) to generate 'productivity scores.' Which privacy consideration MOST requires immediate escalation?",
+    "options": [
+      "The tool processes more data than typical HR systems — increase the encryption strength to compensate",
+      "Employee monitoring of this nature may constitute surveillance requiring: explicit employee notice and consent (or legitimate interest basis under GDPR), works council approval in EU jurisdictions, state-specific employee privacy law compliance (Illinois, California, New York), and evaluation of whether the monitoring is proportionate to the business need — this likely requires legal review before deployment",
+      "Since employees use company equipment, they have no expectation of privacy — proceed with deployment",
+      "The monitoring is acceptable if disclosed in the employment agreement — no further analysis needed"
+    ],
+    "answer": 1,
+    "explanation": "Employee monitoring laws vary significantly by jurisdiction and are increasingly stringent. GDPR requires lawful basis, transparency, and proportionality. Germany, France, and Netherlands require works council approval. Several US states (Illinois, Connecticut, New York) have specific employee monitoring notification requirements. The scope of this monitoring (keystrokes, email metadata, productivity scoring) is highly intrusive and requires legal review, proportionality assessment, and documented legal basis before deployment.",
+    "weakness": "Employee privacy, monitoring law, GDPR legitimate interest",
+    "references": ["https://www.nist.gov/privacy-framework", "https://gdpr.eu/article-6-lawful-basis-for-processing/"]
+  },
+  {
+    "id": 2008,
+    "domain": 2,
+    "text": "A cloud service provider offers 'data sovereignty' guarantees. Your organization's data classification policy requires that 'Top Secret' data never leave domestic jurisdiction. The CSP's terms of service include a provision allowing data transfer for business continuity purposes. How should this conflict be resolved?",
+    "options": [
+      "Accept the CSP's terms — business continuity provisions are standard and do not represent intentional data sovereignty violations",
+      "The contractual conflict means this CSP cannot be used for Top Secret data without a custom contract amendment explicitly prohibiting cross-border transfer for any purpose, including business continuity, and including audit rights to verify compliance",
+      "Use encryption — if the data is encrypted, cross-border transfer does not violate data sovereignty requirements",
+      "Data sovereignty requirements only apply to government data; commercial Top Secret data can transfer to foreign jurisdictions under business continuity provisions"
+    ],
+    "answer": 1,
+    "explanation": "Data sovereignty requirements are absolute for data in the applicable classification. A CSP's standard business continuity provision that allows cross-border transfer is incompatible with 'never leave domestic jurisdiction' requirements — regardless of the reason for transfer. The organization must negotiate a custom Data Processing Agreement with an explicit prohibition on cross-border transfer for any purpose. Encryption does not satisfy data sovereignty requirements (the data still transits/resides in foreign jurisdiction).",
+    "weakness": "Data sovereignty, cloud contracts, data residency requirements",
+    "references": ["https://www.nist.gov/pubs/sp/800/188/final"]
+  },
+  {
+    "id": 2009,
+    "domain": 2,
+    "text": "A manufacturing company operates an OT (Operational Technology) environment with 200+ industrial control systems (ICS). An asset inventory reveals that 40% of ICS assets have no documented owner, no patch history, and were not included in previous risk assessments. What is the MOST critical immediate risk this gap creates?",
+    "options": [
+      "Compliance gap — the undocumented systems will cause audit findings in the next review cycle",
+      "Unmanaged OT assets represent unknown attack surface: unknown vulnerabilities (potentially unpatched for years), unknown network connectivity (may be internet-accessible without knowledge), no incident detection capability, and potential for physical safety impact if compromised — this is a critical operational and safety risk requiring immediate asset discovery and assessment",
+      "Budget risk — the untracked assets represent unplanned capital expenditure for eventual replacement",
+      "The 40% gap is common in OT environments — most ICS assets are air-gapped and inherently secure"
+    ],
+    "answer": 1,
+    "explanation": "OT/ICS environments with undocumented assets represent a critical risk multiplier: (1) Unknown attack surface — you cannot protect what you don't know exists; (2) Potentially internet-connected without knowledge (common discovery in OT assessments); (3) Likely running obsolete OS/firmware with years of unpatched vulnerabilities; (4) No monitoring means compromises go undetected indefinitely; (5) Physical safety impact — ICS compromise can cause equipment damage, injury, or death. OT asset visibility is foundational to ICS security.",
+    "weakness": "OT/ICS asset management, industrial control system security",
+    "references": ["https://www.cisa.gov/topics/industrial-control-systems", "https://www.nist.gov/pubs/sp/800/82/r3/final"]
+  },
+  {
+    "id": 2010,
+    "domain": 2,
+    "text": "An organization uses a Data Loss Prevention (DLP) system to enforce data handling policies. The DLP is configured to block all emails containing credit card numbers (matched by regex). A finance employee reports that the DLP is blocking legitimate invoices containing partial card numbers (last 4 digits only for reference). What does this scenario MOST illustrate about DLP implementation?",
+    "options": [
+      "The DLP is working correctly — any card number pattern, even partial, indicates potential data leakage",
+      "DLP policies require contextual tuning to differentiate between compliant data handling (last 4 digits for customer service reference) and actual data exfiltration (full card numbers); overly broad policies create business disruption and alert fatigue without improving security",
+      "The finance employee should be retrained — partial card numbers are still regulated data under PCI DSS",
+      "Replace the regex-based DLP with a content-aware system that uses AI to determine intent before blocking"
+    ],
+    "answer": 1,
+    "explanation": "DLP effectiveness requires balancing false positives against false negatives. Overly broad patterns create: (1) Business disruption when legitimate operations are blocked; (2) Alert fatigue as users find workarounds; (3) Loss of stakeholder trust in security tools. The fix requires policy refinement: distinguish full PANs (16 digits) from partial references (last 4), add business context rules, and implement exception workflows with security oversight. Under PCI DSS, only full PAN (not partial) is in-scope for most requirements.",
+    "weakness": "DLP implementation, policy tuning, false positive management",
+    "references": ["https://www.pcisecuritystandards.org/document_library/"]
+  },
+  {
+    "id": 2011,
+    "domain": 2,
+    "text": "A security team is asked to establish data retention schedules. Legal requires 7-year retention for financial records. GDPR requires data minimization and deletion when the original purpose expires. An employee dataset used for a 2019 recruiting campaign contains personal data of unsuccessful applicants. What is the correct retention decision?",
+    "options": [
+      "Retain all recruiting data for 7 years to align with financial record retention schedules",
+      "Under GDPR data minimization and storage limitation principles, unsuccessful applicant data should be deleted shortly after the recruiting process concludes (typically 6-12 months per jurisdiction, unless longer retention has a documented legal basis); financial retention schedules apply to financial records, not HR recruiting data",
+      "Retain the data indefinitely — it has no cost to store and may be useful for future recruiting cycles",
+      "Anonymize the data and retain it permanently for workforce analytics purposes"
+    ],
+    "answer": 1,
+    "explanation": "Data retention must be purpose-specific. Financial record retention (7 years) does not apply to recruiting data — they are different categories with different legal bases. GDPR Article 5(1)(e) requires data be kept 'no longer than necessary for the purposes for which the personal data are processed.' For unsuccessful applicants, once the recruiting process concludes and any appeal period expires, there is typically no lawful basis for continued retention. Anonymization for analytics may be acceptable if truly de-identified.",
+    "weakness": "Data retention, GDPR storage limitation, purpose limitation",
+    "references": ["https://gdpr.eu/article-5-how-personal-data-be-processed/"]
+  },
+  {
+    "id": 2012,
+    "domain": 2,
+    "text": "A BYOD (Bring Your Own Device) policy allows employees to use personal smartphones for work email. A security audit identifies that 30% of enrolled devices have not applied OS patches within 90 days. The CISO wants to enforce patching. What is the MOST significant challenge unique to BYOD environments?",
+    "options": [
+      "Personal device users are more resistant to security controls than corporate device users",
+      "BYOD creates competing interests: the organization's security need to patch devices conflicting with employee privacy rights (forcing OS updates may change personal app behavior or data), legal authority limitations (forced remote wipe may destroy personal data), and potential liability for data loss — requiring careful MDM scoping to corporate containers only",
+      "BYOD devices cannot be enrolled in MDM systems — this is a technical limitation",
+      "The 90-day patch window is too aggressive for personal devices — extend to 180 days to accommodate employee preferences"
+    ],
+    "answer": 1,
+    "explanation": "BYOD security management involves unique legal and privacy complexities: (1) The organization's MDM authority extends only to corporate data containers — not the whole device; (2) Forcing OS updates could affect personal data/apps, raising liability; (3) Remote wipe of a lost device may destroy personal data, creating legal issues; (4) Employees may have weaker patch compliance motivation on personal devices. Solutions: containerization (corporate apps in isolated MDM container), clear BYOD agreements, and graduated enforcement with access revocation as the sanction rather than device control.",
+    "weakness": "BYOD security, MDM, employee privacy rights",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/124/r2/final"]
+  },
+  {
+    "id": 2013,
+    "domain": 2,
+    "text": "A government agency classifies a document as 'Secret' under national security classification guidelines. A contractor needs to access a portion of this document for their work. Which principle should guide information sharing?",
+    "options": [
+      "Share the entire document since the contractor has Secret clearance and appropriate need-to-know",
+      "Apply the principle of least privilege combined with need-to-know: share only the specific information the contractor requires for their task, in the appropriate handling format, with appropriate access controls and logging — clearance level alone does not grant access",
+      "Deny access entirely — contractors should not access classified materials regardless of clearance level",
+      "Declassify the relevant portion and share it through normal unclassified channels to simplify handling"
+    ],
+    "answer": 1,
+    "explanation": "In classified information handling, clearance level is necessary but not sufficient for access. Need-to-know is an independent, mandatory requirement. A person with Secret clearance who does not have a legitimate need for specific information should not receive it. Additionally, information sharing should follow least privilege: share only what is needed for the specific task, not the entire document. This principle applies equally to commercial and government classified information systems.",
+    "weakness": "Need-to-know principle, clearance vs. access, least privilege",
+    "references": ["https://www.archives.gov/isoo/policy-documents/cnss-1253.html"]
+  },
+  {
+    "id": 2014,
+    "domain": 2,
+    "text": "An organization completes a merger. The acquired company used a different data classification scheme (Public, Internal, Confidential, Secret) while the acquiring company uses (Unclassified, Restricted, Highly Restricted, Top Secret). During integration, data must be transferred between systems. What is the PRIMARY risk during classification scheme harmonization?",
+    "options": [
+      "Storage cost increases from maintaining two separate classification systems temporarily during transition",
+      "Classification translation errors where data classified 'Confidential' in one scheme is mapped to an inequivalent level in the other scheme, resulting in data being under-protected or over-controlled — requiring a formal classification crosswalk with equivalence testing and business validation before any data migration",
+      "Employee confusion about which classification system applies to their work documents",
+      "Regulatory non-compliance because regulators may not recognize the acquiring company's classification scheme for previously classified data"
+    ],
+    "answer": 1,
+    "explanation": "Classification scheme harmonization is a high-risk activity where mapping errors directly translate to security control failures. If 'Confidential' in Company A maps to 'Restricted' in Company B but 'Highly Restricted' controls are actually warranted, the data becomes under-protected post-migration. A formal crosswalk process requires: (1) Side-by-side comparison of classification criteria, (2) Business owner validation of proposed mappings, (3) Conservative mapping (up-classify when uncertain), (4) Pilot testing before bulk migration.",
+    "weakness": "Data classification harmonization, M&A data governance",
+    "references": ["https://www.nist.gov/pubs/sp/800/60/v1/r1/final"]
+  },
+  {
+    "id": 2015,
+    "domain": 2,
+    "text": "A retail company processes payment card data. During a PCI DSS assessment, the QSA discovers that the company stores Primary Account Numbers (PANs) in log files that are retained for 90 days and accessible to the entire IT operations team of 45 people. What is the MOST critical finding?",
+    "options": [
+      "The 90-day retention period exceeds PCI DSS limits for log retention",
+      "PCI DSS Requirement 3.4 prohibits storing unprotected PANs; PAN in log files violates this requirement; additionally, Requirement 7 requires access restriction to those with business need — 45 IT staff having access violates least privilege; this is a critical finding requiring immediate remediation: purge existing PANs from logs, implement log masking to prevent future PAN capture, and restrict log access",
+      "Log retention for 90 days is insufficient — PCI DSS requires 12 months of log retention",
+      "The finding is minor because log files are an internal system — external attackers cannot access them"
+    ],
+    "answer": 1,
+    "explanation": "PCI DSS Requirement 3.4 requires that PAN be rendered unreadable wherever stored (not just in databases — log files included). This is a Level 1 finding. Additionally, PCI DSS Requirement 7 mandates access to cardholder data be restricted on a need-to-know basis — 45 IT staff access violates this. Note: PCI DSS does require logs for at least 12 months (Requirement 10.7) with 3 months immediately available, making the 90-day access window a separate finding.",
+    "weakness": "PCI DSS compliance, PAN storage, log security",
+    "references": ["https://www.pcisecuritystandards.org/document_library/"]
+  },
+  {
+    "id": 2016,
+    "domain": 2,
+    "text": "A data scientist wants to use a machine learning model trained on customer purchase history to predict churn. The training data includes names, addresses, and purchase history. The model will be deployed as an API. Which privacy consideration is MOST critical for this use case?",
+    "options": [
+      "Encrypt all training data using AES-256 before feeding it to the ML model",
+      "ML models can 'memorize' and inadvertently expose training data through model inversion or membership inference attacks; the production model should be trained on properly anonymized or synthetic data with differential privacy techniques, and the model API should be monitored for extraction attempts — using raw PII in training creates privacy risks that persist in the deployed model",
+      "The model doesn't store data, so privacy risks are limited to the training phase only",
+      "Obtain customer consent for ML processing before training the model on their data"
+    ],
+    "answer": 1,
+    "explanation": "ML models present unique privacy risks beyond traditional data handling. Model inversion attacks can reconstruct training data from model outputs. Membership inference attacks can determine if a specific individual's data was in the training set. These risks persist in the deployed model even after training data is deleted. Best practices: train on anonymized/synthetic data, implement differential privacy, limit model query rates, monitor for extraction patterns, and consider federated learning approaches. Customer consent addresses regulatory requirements but doesn't mitigate technical privacy risks.",
+    "weakness": "ML privacy, model inversion attacks, differential privacy",
+    "references": ["https://www.nist.gov/privacy-framework", "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf"]
+  },
+  {
+    "id": 2017,
+    "domain": 2,
+    "text": "An e-commerce company processes 50,000 orders per day. Each order record includes full credit card numbers, CVV codes, and cardholder names stored 'temporarily' in a transaction processing database for dispute resolution. The database is encrypted. What is the MOST significant compliance violation?",
+    "options": [
+      "PCI DSS Requirement 3.2 absolutely prohibits storing CVV codes (Card Verification Codes) after transaction authorization under any circumstances — not even temporarily, not even encrypted; CVV storage is a critical PCI DSS violation regardless of encryption or business justification",
+      "The encryption is insufficient — PCI DSS requires hardware security modules (HSMs) for credit card data encryption",
+      "The 50,000 daily transaction volume triggers additional PCI DSS Level 1 requirements not mentioned",
+      "Dispute resolution is a legitimate business justification for temporary card data storage — this is compliant with proper documentation"
+    ],
+    "answer": 0,
+    "explanation": "PCI DSS Requirement 3.2 is absolute: sensitive authentication data (CVV/CVC codes, full magnetic stripe data, PINs) must NEVER be stored after authorization — regardless of whether it is encrypted, tokenized, or otherwise protected. There are no exceptions for dispute resolution or any other business purpose. This is one of the clearest, most critical PCI DSS prohibitions. Dispute resolution is handled through the card network's chargeback process, not by retaining CVV.",
+    "weakness": "PCI DSS sensitive authentication data, CVV storage prohibition",
+    "references": ["https://www.pcisecuritystandards.org/document_library/"]
+  },
+  {
+    "id": 2018,
+    "domain": 2,
+    "text": "A technology company is implementing a software asset management (SAM) program. During a license audit, they discover 200 instances of commercial software running without valid licenses. The legal team asks if the company has 'copyright infringement exposure.' What is the correct answer and recommended immediate action?",
+    "options": [
+      "No exposure exists for internal use — copyright infringement only applies to distribution of software",
+      "Yes — unlicensed software use constitutes copyright infringement regardless of whether it is distributed; immediate actions: stop using unlicensed instances, purchase retroactive licenses or use open-source alternatives, conduct comprehensive license reconciliation, and implement SAM controls to prevent recurrence",
+      "The risk is minimal — software vendors rarely audit small companies, making enforcement unlikely",
+      "Purchase licenses for future use only — the past unlicensed use creates no ongoing liability if corrected going forward"
+    ],
+    "answer": 1,
+    "explanation": "The Software Alliance (BSA) actively audits organizations for unlicensed software use. Copyright infringement applies to unauthorized use (making copies for installation), not just distribution. Statutory damages can reach $150,000 per work infringed, plus legal fees. Organizations self-reporting through software vendors' amnesty programs often receive more favorable terms. A comprehensive SAM program should include: license inventory, usage monitoring, procurement controls, and regular reconciliation.",
+    "weakness": "Software asset management, intellectual property, copyright compliance",
+    "references": ["https://www.bsa.org/software-management"]
+  },
+  {
+    "id": 2019,
+    "domain": 2,
+    "text": "A cloud storage service automatically replicates data across three geographic regions for redundancy. A customer uploads files classified as 'Confidential — Domestic Only.' The CSP's replication includes servers in Germany and Singapore. What controls framework issue does this scenario illustrate?",
+    "options": [
+      "The CSP is providing better service than required — three-region replication exceeds 'domestic only' requirements",
+      "This illustrates the shared responsibility model gap: the customer is responsible for configuring data residency restrictions within the CSP's platform, while the CSP is responsible for making those controls available and functioning; the customer must configure geographic restriction policies (e.g., S3 bucket policies, Azure Policy) and verify through audit that replication stays within approved regions",
+      "The CSP is solely responsible for this data sovereignty violation — the customer has no liability",
+      "Automatic replication is acceptable if data is encrypted with customer-managed keys — encryption resolves the residency requirement"
+    ],
+    "answer": 1,
+    "explanation": "Cloud shared responsibility clearly applies here. The CSP provides the capability to restrict data to specific regions (geographic policies, access restrictions). The customer is responsible for: (1) Understanding their data residency requirements, (2) Configuring appropriate geographic restrictions in the CSP's platform, (3) Verifying through audit/monitoring that restrictions function as configured. Encryption does not satisfy data residency requirements — regulated data in a foreign jurisdiction remains a violation regardless of encryption.",
+    "weakness": "Cloud shared responsibility, data residency, geographic controls",
+    "references": ["https://www.nist.gov/pubs/sp/800/188/final", "https://csrc.nist.gov/pubs/sp/800/210/final"]
+  },
+  {
+    "id": 2020,
+    "domain": 2,
+    "text": "A security assessment reveals that a company's customer database contains Social Security Numbers that are only 'needed' as a secondary identifier for a legacy system that could use an alternate identifier. This represents 30 million SSNs stored in a plaintext column. What approach BEST addresses both the security and architectural concerns?",
+    "options": [
+      "Encrypt the SSN column using AES-256 at the application level — this sufficiently protects the existing data",
+      "Implement a data minimization and re-architecture strategy: migrate the legacy system to use a non-SSN identifier, purge SSNs after migration, tokenize or encrypt any SSNs that have legitimate remaining retention requirements, and verify no residual copies exist in backups or audit logs — the goal is eliminating unnecessary SSN storage entirely",
+      "Add database-level encryption (TDE) to protect all data in the database including the SSN column",
+      "Hash the SSN values for storage — hashed SSNs provide security while maintaining searchability"
+    ],
+    "answer": 1,
+    "explanation": "The CISSP principle of data minimization: don't store what you don't need, especially high-value data like SSNs. Encrypting data you shouldn't be storing doesn't fix the underlying risk — it mitigates but doesn't eliminate it. True remediation eliminates the unnecessary storage. Note: SSNs are NOT appropriate to hash for lookups because the SSN space is small enough to precompute (only ~900M valid numbers) — rainbow tables make SSN hashes trivially reversible.",
+    "weakness": "Data minimization, SSN handling, tokenization vs encryption",
+    "references": ["https://www.nist.gov/privacy-framework"]
+  },
+  {
+    "id": 2021,
+    "domain": 2,
+    "text": "A research institution collaborates with 15 partner universities on a genomic research project. The genomic data is considered extremely sensitive (re-identification risk even after de-identification). Partners require data access but the lead institution must maintain governance. Which data sharing architecture BEST balances access with protection?",
+    "options": [
+      "Share full de-identified datasets with all partners via secure FTP — de-identification eliminates the re-identification risk",
+      "Implement a federated analysis model where the genomic data never leaves the lead institution's controlled environment; partners submit analytical code that runs in a secure enclave (trusted execution environment) and receive only aggregated statistical results — the data itself never transfers while enabling legitimate research",
+      "Require all partners to sign data sharing agreements and share encrypted datasets with each institution managing their own decryption keys",
+      "Publish the data in a restricted-access repository with multi-factor authentication required for each access event"
+    ],
+    "answer": 1,
+    "explanation": "Genomic data presents unique re-identification risks — studies show even small genomic datasets can identify individuals. De-identification does not fully mitigate this risk for genomic data. The federated analysis model (e.g., as used in genomic initiatives like UK Biobank) keeps data in a controlled environment while still enabling research: partners analyze data through APIs or secure enclaves and receive only statistical outputs. This implements data minimization (data doesn't move), access control, and privacy protection simultaneously.",
+    "weakness": "Federated data analysis, genomic privacy, secure research environments",
+    "references": ["https://www.nist.gov/privacy-framework"]
+  },
+  {
+    "id": 2022,
+    "domain": 2,
+    "text": "During an internal audit, you discover that a system administrator created a test account 'testadmin' with administrator privileges two years ago for a system migration project and never disabled it. The account still has an active, known password. What does this primarily represent in the context of asset and identity management?",
+    "options": [
+      "A change management failure — the account should have been created through the formal change process",
+      "A privileged account management failure creating significant risk: orphaned privileged accounts represent standing access that violates least privilege; known passwords enable easy credential stuffing; two years of unmonitored activity creates attribution gaps — immediate actions: disable the account, review all activity under this account for unauthorized use, and implement privileged access lifecycle controls",
+      "This is a minor finding — test accounts are standard practice and present low risk if the system migration was successful",
+      "A documentation failure — the account needs to be added to the identity management inventory and continue operating"
+    ],
+    "answer": 1,
+    "explanation": "Orphaned privileged accounts are a critical security risk. NIST SP 800-63 and CIS Controls require periodic access reviews and prompt account disabling. A 2-year-old admin account with a known password represents: (1) Unnecessary standing privilege; (2) Potential backdoor for internal or external actors; (3) Attribution impossibility — any activity appears to be legitimate migration work; (4) Compliance violation (PCI DSS Requirement 8.1, SOX access controls). The forensic review is critical to determine if the account was exploited.",
+    "weakness": "Privileged account management, orphaned accounts, access reviews",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 2023,
+    "domain": 2,
+    "text": "A company is disposing of a cloud-based SaaS application that stored customer data. The vendor agreement states that 'data will be deleted within 90 days of contract termination.' The CSP cannot provide certificates of destruction. What risk does this present?",
+    "options": [
+      "No risk — the contractual 90-day deletion clause is legally binding and sufficient assurance",
+      "The inability to verify deletion creates regulatory compliance risk: GDPR Article 28 requires data processors to provide deletion verification; without certificates of destruction or audit evidence, the organization cannot demonstrate compliance with data subject deletion rights or regulatory requirements — renegotiate future agreements to include verifiable deletion and obtain available evidence from the current termination",
+      "The 90-day window is too long — demand immediate deletion within 24 hours",
+      "Cloud providers are legally prohibited from providing certificates of destruction — this is an unreasonable request"
+    ],
+    "answer": 1,
+    "explanation": "Cloud data disposal requires verified deletion. GDPR Article 28 requires data processors (CSPs) to delete or return all data on termination. CCPA and other regulations require verifiable deletion. When a CSP cannot provide certificates of destruction: (1) request logs of deletion operations, (2) review SLA documentation, (3) document your compliance efforts, (4) include enforceable deletion verification requirements in future contracts. The current risk should be documented in the risk register with compensating controls noted.",
+    "weakness": "Cloud data disposal, SaaS offboarding, data destruction verification",
+    "references": ["https://gdpr.eu/article-28-processor/", "https://csrc.nist.gov/pubs/sp/800/188/final"]
+  },
+  {
+    "id": 2024,
+    "domain": 2,
+    "text": "A penetration tester gains access to a misconfigured internal SharePoint site and finds hundreds of documents marked 'Internal Use Only' but also discovers one folder named 'Executive Compensation — Confidential' containing salary details, bonus structures, and stock option grants. What does finding this on a misconfigured internal site MOST illustrate about data security failures?",
+    "options": [
+      "The SharePoint site was misconfigured — this is purely an access control failure, not a classification issue",
+      "This illustrates a compound failure: data classification without access controls enforcement (documents are marked correctly but accessible to all internal users), absence of need-to-know enforcement for sensitive compensation data (HR/Legal typically have strict access restrictions), and inadequate periodic access reviews — classification labels are only effective when technical controls enforce them",
+      "Executive compensation data is not regulated data and carries minimal risk if exposed internally",
+      "The finding indicates SharePoint is not a suitable platform for sensitive documents — migrate to a dedicated secure document management system"
+    ],
+    "answer": 1,
+    "explanation": "Data classification is only the first step — technical access controls must enforce the classification. 'Confidential' data that is accessible to anyone with SharePoint access is not protected by its label. This represents: (1) Classification without control enforcement; (2) Insufficient need-to-know implementation for highly sensitive HR/legal data; (3) Lack of data loss prevention monitoring; (4) Potentially regulatory exposure (SEC rules on insider information). Classification systems must be backed by technical controls and regular access reviews.",
+    "weakness": "Data classification enforcement, access controls, SharePoint security",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 2025,
+    "domain": 2,
+    "text": "An organization's asset management database shows 1,200 endpoints. A network scan discovers 1,380 devices on the network. The 180-device discrepancy includes unauthorized personal laptops, two legacy servers connected years ago, and several IoT devices installed by facilities management without IT knowledge. What principle does this situation MOST violate, and what is the recommended solution?",
+    "options": [
+      "The discrepancy violates change management — all device additions should go through formal approval",
+      "This violates the security principle that you cannot protect what you don't know exists — 'shadow IT' and undocumented assets create unmanaged attack surface; solution: implement 802.1X network authentication to prevent unauthorized devices from connecting, establish a formal asset onboarding process, integrate network access control (NAC) with the asset management database, and investigate the legacy servers for potential long-term unauthorized access",
+      "The discrepancy is within acceptable tolerance for large enterprises — 15% unknown devices is normal",
+      "Implement a firewall rule to block all devices not in the asset database from accessing the internet"
+    ],
+    "answer": 1,
+    "explanation": "Asset visibility is foundational to security — CIS Control 1 (Inventory and Control of Enterprise Assets) reflects this. Unknown devices create: (1) Unmonitored attack surface; (2) Potential entry points for attackers using already-compromised devices; (3) Unknown vulnerabilities on unmanaged systems; (4) Compliance gaps (PCI DSS requires complete cardholder data environment inventory). NAC with 802.1X provides network-level enforcement: unauthorized devices are quarantined or denied access regardless of how they connect.",
+    "weakness": "Asset inventory, shadow IT, network access control",
+    "references": ["https://www.cisecurity.org/controls/", "https://csrc.nist.gov/pubs/sp/800/82/r3/final"]
+  }
+]
