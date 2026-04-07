@@ -812,9 +812,28 @@ gh pr create --title "Your PR title" --body "Description of changes"
 
 ---
 
+## 👤 Author
+
+**Sungho Maeung**
+- GitHub: [@smaeung](https://github.com/smaeung)
+- Project: [Mock-CISSP-App](https://github.com/smaeung/Mock-CISSP-App)
+
+---
+
+## 🤝 Contributors
+
+| Contributor | Role | Contribution |
+|-------------|------|--------------|
+| **Sungho Maeung** ([@smaeung](https://github.com/smaeung)) | Author & Owner | Project design, requirements, domain expertise, CISSP content direction |
+| **Claude AI** (Anthropic) | AI Pair Programmer | Code implementation, 200 scenario-based questions, architecture, documentation |
+
+Contributions are welcome! See the [Contributing](#-contributing) section for guidelines.
+
+---
+
 ## 📄 License
 
-MIT — free to use, modify, and distribute.
+MIT © [Sungho Maeung](https://github.com/smaeung) — free to use, modify, and distribute.
 
 ---
 
