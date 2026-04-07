@@ -4,6 +4,18 @@ An AI-powered, offline-first CISSP exam preparation tool with a **4-hour CBT moc
 
 ---
 
+## Screenshots
+
+| Dashboard | Practice Quiz | Mock Exam |
+|-----------|--------------|-----------|
+| ![Dashboard](docs/Dashbord-Screenshot.png) | ![Practice Quiz](docs/Practice-Quiz-Screenshot.png) | ![Mock Exam](docs/Mock-Exam-Screenshot.png) |
+
+| Domain Guide | Analytics | Settings | Wrong Answers |
+|-------------|-----------|----------|---------------|
+| ![Domains](docs/Domain-Guide-Screenshot.png) | ![Analytics](docs/Analysic-Screenshot.png) | ![Settings](docs/Settings-Screenshot.png) | ![Wrong Answers](docs/Wrong-answers-Screenshot.png) |
+
+---
+
 ## Table of Contents
 
 1. [Features](#-features)

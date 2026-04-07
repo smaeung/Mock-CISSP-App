@@ -27,3 +27,6 @@ __pycache__/
 docs/.bkit-memory.json
 docs/.pdca-status.json
 docs/.pdca-snapshots/
+
+# Personal documents
+*.docx
