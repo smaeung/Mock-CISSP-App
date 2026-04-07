@@ -4,23 +4,66 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CISSP Study App</title>
-<!-- Backend API config: when running via cissp_server.py, this is auto-detected -->
+<!--
+  CISSP Study App — Frontend SPA
+  ================================
+  Author    : Sungho Maeung
+  AI Pair   : Claude Sonnet 4.6 (Anthropic)
+
+  Architecture:
+    - Single-file Vanilla JS SPA — no build step, no framework
+    - Tries to reach cissp_server.py at localhost:5432 on load
+    - If server is available: reads/writes via REST API (SQLite persistence)
+    - If server is offline:   falls back to localStorage (browser-only persistence)
+    - This "dual persistence" model keeps the app fully functional offline
+
+  Key global state variables (defined in the QUIZ ENGINE section):
+    state         — user progress (totalAnswered, domainStats, wrongAnswers, etc.)
+    quizQuestions — current quiz question array
+    currentQIndex — pointer to current question in quiz
+    quizAnswers   — array of {qId, correct, selected} for current quiz session
+    mockExam      — object holding all CBT exam state (questions, answers, timer)
+    hasApiKey     — boolean: is an LLM API key configured?
+    claudeCache   — in-memory cache for AI explanations (keyed by "qId-outcome")
+    llmConfig     — active provider name + per-provider config
+-->
+
+<!-- Backend detection: runs before DOMContentLoaded to detect server as early as possible -->
 <script>
+// API_BASE is the root URL for all REST calls to cissp_server.py
 const API_BASE = 'http://localhost:5432';
-let USE_BACKEND = false; // flips to true if server responds to ping
+
+// USE_BACKEND flips to true if the server responds to /api/ping within 1.2 seconds.
+// All API calls are gated on this flag to prevent fetch errors when server is offline.
+let USE_BACKEND = false;
+
+/**
+ * detectBackend — probe cissp_server.py at startup.
+ * Uses AbortSignal.timeout(1200) so a slow/missing server doesn't stall app load.
+ * If the server responds OK, sets USE_BACKEND=true and updates the storage badge.
+ * Called once from window.onload / DOMContentLoaded in the initialization block below.
+ */
 async function detectBackend() {
   try {
     const r = await fetch(API_BASE + '/api/ping', { signal: AbortSignal.timeout(1200) });
     if (r.ok) { USE_BACKEND = true; updateStorageIndicator(true); }
   } catch(e) { USE_BACKEND = false; updateStorageIndicator(false); }
 }
+
+/**
+ * updateStorageIndicator — update the storage mode badge in the sidebar.
+ * Green "💾 SQLite DB"    → server is running, data is durable
+ * Orange "🌐 Browser Storage" → server offline, data in localStorage only
+ */
 function updateStorageIndicator(online) {
   const el = document.getElementById('storage-badge');
   if (!el) return;
   el.textContent = online ? '💾 SQLite DB' : '🌐 Browser Storage';
   el.style.background = online ? '#e0f2e9' : '#fff3e0';
   el.style.color = online ? '#1a6b3a' : '#b45309';
-  el.title = online ? 'Data saved to cissp_study.db via local server' : 'Data saved in browser localStorage — run cissp_server.py for persistent DB';
+  el.title = online
+    ? 'Data saved to cissp_study.db via local server'
+    : 'Data saved in browser localStorage — run cissp_server.py for persistent DB';
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -837,8 +880,19 @@ let quizAnswers = [];
 let selectedDomains = new Set([1,2,3,4,5,6,7,8]);
 let charts = {};
 
-// ─── Backend-aware persistence ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// PERSISTENCE LAYER — Dual-mode storage (SQLite via server OR localStorage)
+// Why dual mode?
+//   The app is designed to work standalone (just open the HTML file) OR with
+//   the Python server running. localStorage is the fallback — always available
+//   in any browser. SQLite (via server) is preferred for durable, queryable storage.
+// ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * emptyState — returns a fresh zero-value progress object.
+ * Used on first launch or after a full data reset.
+ * domainStats keys are domain IDs as strings ("1"–"8").
+ */
 function emptyState() {
   return {
     totalAnswered: 0, totalCorrect: 0,
@@ -848,6 +902,11 @@ function emptyState() {
   };
 }
 
+/**
+ * loadState — read study progress from localStorage.
+ * 'cissp_state_v2' key avoids conflicts with any older versions of the app.
+ * Falls back to emptyState() if key doesn't exist or JSON is corrupt.
+ */
 function loadState() {
   try {
     const saved = localStorage.getItem('cissp_state_v2');
@@ -856,10 +915,22 @@ function loadState() {
   return emptyState();
 }
 
+/**
+ * saveState — write current `state` to localStorage.
+ * Called after every answer and after any state mutation so the browser
+ * copy stays in sync even when the server is not running.
+ */
 function saveState() {
   localStorage.setItem('cissp_state_v2', JSON.stringify(state));
 }
 
+/**
+ * syncStateFromBackend — replace `state` with authoritative data from SQLite.
+ * Called after any backend write (e.g., recordAnswerBackend) to ensure the
+ * in-memory state reflects the true database state.
+ * Also mirrors the result to localStorage as a fresh offline fallback.
+ * No-ops silently when server is unavailable — localStorage state remains active.
+ */
 async function syncStateFromBackend() {
   if (!USE_BACKEND) return;
   try {
@@ -867,11 +938,17 @@ async function syncStateFromBackend() {
     if (r.ok) {
       const data = await r.json();
       state = data;
-      saveState(); // mirror to localStorage as fallback
+      saveState(); // mirror to localStorage as offline fallback
     }
   } catch(e) { console.warn('Backend sync failed, using localStorage'); }
 }
 
+/**
+ * recordAnswerBackend — persist one answered question to the SQLite backend.
+ * Sends POST /api/answer then re-syncs state from backend to stay consistent.
+ * Fire-and-forget design: localStorage is already updated optimistically
+ * in recordAnswer() before this async call, so the UI never waits for it.
+ */
 async function recordAnswerBackend(qId, domainId, isCorrect, questionText) {
   if (!USE_BACKEND) return;
   try {
@@ -884,6 +961,11 @@ async function recordAnswerBackend(qId, domainId, isCorrect, questionText) {
   } catch(e) { console.warn('Backend record failed, localStorage only'); }
 }
 
+/**
+ * getDomainStat — get or initialize the stats object for one domain.
+ * Using a getter ensures every domain has a valid {answered, correct} object
+ * even if the user has never touched that domain yet.
+ */
 function getDomainStat(domainId) {
   if (!state.domainStats[domainId]) {
     state.domainStats[domainId] = { answered: 0, correct: 0 };
@@ -891,8 +973,20 @@ function getDomainStat(domainId) {
   return state.domainStats[domainId];
 }
 
+/**
+ * recordAnswer — the central answer-recording function.
+ * Called immediately when the user picks any option in the quiz.
+ *
+ * Two-phase write strategy:
+ *   1. Optimistic: update in-memory `state` + localStorage synchronously
+ *      so the UI (streak counter, score) updates instantly with no latency
+ *   2. Async: send to SQLite backend in the background (non-blocking)
+ *
+ * Wrong answer tracking: adds to wrongAnswers list or increments count
+ * if the same question was answered incorrectly before.
+ */
 function recordAnswer(qId, domainId, isCorrect, question) {
-  // Always update localStorage state immediately (optimistic)
+  // Phase 1: Optimistic local update
   state.totalAnswered++;
   if (isCorrect) state.totalCorrect++;
 
@@ -900,6 +994,7 @@ function recordAnswer(qId, domainId, isCorrect, question) {
   ds.answered++;
   if (isCorrect) ds.correct++;
 
+  // Track daily activity for the calendar heatmap
   const today = todayStr();
   if (!state.dailyActivity[today]) state.dailyActivity[today] = { answered: 0, correct: 0 };
   state.dailyActivity[today].answered++;
@@ -908,41 +1003,57 @@ function recordAnswer(qId, domainId, isCorrect, question) {
   if (!state.studyDays.includes(today)) state.studyDays.push(today);
   updateStreak(today);
 
+  // Track wrong answers for the Review tab
   if (!isCorrect) {
     const existing = state.wrongAnswers.findIndex(w => w.qId === qId);
     if (existing >= 0) {
+      // Already in list — increment count and update date
       state.wrongAnswers[existing].count++;
       state.wrongAnswers[existing].lastWrong = today;
     } else {
+      // First time wrong — add new entry (truncate text to 80 chars for display)
       state.wrongAnswers.push({
         qId, domainId, count: 1, lastWrong: today,
         questionText: question.text.substring(0, 80) + '...'
       });
     }
   }
-  saveState();
+  saveState(); // persist to localStorage immediately
 
-  // Also persist to SQLite backend if available
+  // Phase 2: Async SQLite backend write (does not block UI)
   if (USE_BACKEND) {
     recordAnswerBackend(qId, domainId, isCorrect, question.text);
   }
 
+  // Update streak badge in the header in real-time
   document.getElementById('streak-count').textContent = state.streakDays;
 }
 
+/**
+ * updateStreak — increment or reset the consecutive study day counter.
+ * Streak logic:
+ *   - Same day as last study → no change (already counted today)
+ *   - Yesterday was last study → extend streak by 1
+ *   - Any other gap → reset to 1 (started a new streak today)
+ */
 function updateStreak(today) {
-  if (state.lastStudyDate === today) return;
+  if (state.lastStudyDate === today) return; // Already studied today, no change
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yStr = yesterday.toISOString().split('T')[0];
   if (state.lastStudyDate === yStr) {
-    state.streakDays++;
+    state.streakDays++;         // Consecutive day — extend streak
   } else if (state.lastStudyDate !== today) {
-    state.streakDays = 1;
+    state.streakDays = 1;       // Gap in days — reset to 1
   }
   state.lastStudyDate = today;
 }
 
+/**
+ * todayStr — return today's date as "YYYY-MM-DD".
+ * ISO format makes string comparison and sorting trivial.
+ * split('T')[0] strips the time portion from toISOString().
+ */
 function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
@@ -1098,12 +1209,21 @@ function getSelectedQuizDomains() {
   return Array.from(document.querySelectorAll('#quiz-domain-sel input:checked')).map(cb => parseInt(cb.value));
 }
 
+/**
+ * startQuiz — navigate to the quiz page and optionally pre-configure domain selection.
+ * mode values:
+ *   'selected'  → user manually picked domains in the selector; launch immediately
+ *   'weak'      → auto-select the 3 lowest-accuracy domains for targeted practice
+ *   'all'       → select all domains (used by "Quick Start" dashboard button)
+ * setTimeout(100ms) gives the DOM time to render the quiz page before we
+ * manipulate the domain checkboxes and call launchQuiz().
+ */
 function startQuiz(mode) {
   showPage('quiz');
   if (mode === 'selected' || mode === 'weak' || mode === 'all') {
     setTimeout(() => {
       if (mode === 'weak') {
-        // Focus on domains with lowest accuracy
+        // Sort domains by accuracy ascending → weakest first → take bottom 3
         const sorted = DOMAINS.map(d => {
           const ds = getDomainStat(d.id);
           const pct = ds.answered > 0 ? (ds.correct / ds.answered) : 0;
@@ -1119,6 +1239,12 @@ function startQuiz(mode) {
   }
 }
 
+/**
+ * startReviewSession — launch a focused quiz using only the user's wrong answers.
+ * Pulls up to 20 wrong questions from QUESTION_BANK matching the stored wrong IDs.
+ * Why 20 max? Keeps review sessions manageable — long sessions reduce completion rates.
+ * Skips the domain selector UI and goes straight into active quiz mode.
+ */
 function startReviewSession() {
   if (state.wrongAnswers.length === 0) {
     alert('No wrong answers to review yet! Practice some questions first.');
@@ -1141,6 +1267,12 @@ function startReviewSession() {
   }, 100);
 }
 
+/**
+ * launchQuiz — build the question set and start an active quiz session.
+ * Filters QUESTION_BANK by selected domains, shuffles, and slices to requested count.
+ * [...pool].sort(() => Math.random() - 0.5) is the Fisher-Yates-adjacent JS shuffle idiom.
+ * min(count, pool.length) prevents requesting more questions than exist in the bank.
+ */
 function launchQuiz() {
   const domains = getSelectedQuizDomains();
   if (domains.length === 0) { alert('Please select at least one domain.'); return; }
@@ -1148,7 +1280,7 @@ function launchQuiz() {
   const pool = QUESTION_BANK.filter(q => domains.includes(q.domain));
   if (pool.length === 0) { alert('No questions available for selected domains.'); return; }
 
-  // Shuffle and pick
+  // Shuffle pool randomly then slice to requested question count
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   quizQuestions = shuffled.slice(0, Math.min(count, shuffled.length));
   currentQIndex = 0;
@@ -1160,7 +1292,15 @@ function launchQuiz() {
   renderQuestion();
 }
 
-// Build explanation HTML — shared by selectAnswer and restoreAnsweredState
+/**
+ * buildExplanationHtml — generate the post-answer explanation card HTML.
+ * Shared by both selectAnswer() (fresh answer) and restoreAnsweredState() (revisit).
+ * Why shared? Both scenarios need identical explanation markup — DRY principle.
+ * Conditionally appends the "Ask AI" button only when the backend is running
+ * AND an API key is configured, so the button never appears in offline mode.
+ * JSON.stringify + replace quotes prevents XSS when embedding the question object
+ * as an inline onclick attribute string.
+ */
 function buildExplanationHtml(q, selectedIdx, isCorrect) {
   let html = `<div class="explanation-box">
     <h4>${isCorrect ? '✅ Correct!' : '❌ Incorrect'} — Explanation</h4>
@@ -1186,7 +1326,12 @@ function buildExplanationHtml(q, selectedIdx, isCorrect) {
   return html;
 }
 
-// Restore the answered state when navigating back to a previously answered question
+/**
+ * restoreAnsweredState — re-apply visual answer state when navigating back to a question.
+ * When a user presses "Back", the question re-renders blank. This function recolors
+ * the options (correct=green, wrong=red) and re-shows the explanation card so the
+ * user can review what they answered without re-triggering a new answer recording.
+ */
 function restoreAnsweredState(q, selectedIdx, isCorrect) {
   const options = document.querySelectorAll('.option');
   options.forEach(o => { o.classList.add('disabled'); o.onclick = null; });
@@ -1199,6 +1344,15 @@ function restoreAnsweredState(q, selectedIdx, isCorrect) {
   document.getElementById('btn-next').disabled = false;
 }
 
+/**
+ * renderQuestion — draw the current question card into the DOM.
+ * Handles three states:
+ *   1. Quiz complete (index past end) → call showResults()
+ *   2. Fresh question → render blank options, hide explanation
+ *   3. Previously answered → call restoreAnsweredState() to show prior answer
+ * Progress bar width = (currentQIndex / total) * 100% for visual feedback.
+ * Live score display updates after each answer to keep motivation high.
+ */
 function renderQuestion() {
   if (currentQIndex >= quizQuestions.length) {
     showResults();
@@ -1249,13 +1403,20 @@ function renderQuestion() {
   }
 }
 
+/**
+ * selectAnswer — handle a user clicking an answer option.
+ * Immediately disables all options (prevents double-clicking), highlights
+ * correct/wrong visually, then records the answer.
+ * Guard: only records to state if quizAnswers[currentQIndex] is undefined —
+ * prevents double-counting if the user somehow triggers this on a revisit.
+ */
 function selectAnswer(selectedIdx, q) {
   const options = document.querySelectorAll('.option');
   options.forEach(o => { o.classList.add('disabled'); o.onclick = null; });
 
   const isCorrect = selectedIdx === q.answer;
   options[selectedIdx].classList.add(isCorrect ? 'correct' : 'wrong');
-  if (!isCorrect) options[q.answer].classList.add('correct');
+  if (!isCorrect) options[q.answer].classList.add('correct'); // always reveal correct
 
   // Only record if this is a fresh answer (not re-viewing a previous one)
   if (quizAnswers[currentQIndex] === undefined) {
@@ -1272,6 +1433,11 @@ function selectAnswer(selectedIdx, q) {
   btnNext.textContent = (currentQIndex === quizQuestions.length - 1) ? 'Finish ✓' : 'Next →';
 }
 
+/**
+ * nextQuestion / prevQuestion — advance or retreat one question.
+ * prevQuestion guards against going below index 0.
+ * nextQuestion lets renderQuestion() handle the "past end" case (shows results).
+ */
 function nextQuestion() {
   currentQIndex++;
   renderQuestion();
@@ -1284,6 +1450,11 @@ function prevQuestion() {
   }
 }
 
+/**
+ * quitQuiz — allow the user to exit mid-quiz.
+ * If at least one answer was recorded, shows the results screen so progress
+ * isn't completely lost. Otherwise returns to the domain selector setup view.
+ */
 function quitQuiz() {
   if (confirm('Quit this quiz? Progress so far will be saved.')) {
     if (quizAnswers.filter(Boolean).length > 0) showResults();
@@ -1294,6 +1465,13 @@ function quitQuiz() {
   }
 }
 
+/**
+ * showResults — render the end-of-quiz summary screen.
+ * Computes final score and determines pass/fail (CISSP threshold is 70%).
+ * Builds a per-domain breakdown grid so the user can see exactly which
+ * domains dragged their score down — the most actionable feedback.
+ * Color coding: green ≥75%, amber ≥50%, red <50% (mirrors the weakness analysis).
+ */
 function showResults() {
   document.getElementById('quiz-active').style.display = 'none';
   document.getElementById('quiz-results').style.display = 'block';
@@ -1337,6 +1515,14 @@ function showResults() {
 // ============================================================
 // REVIEW PAGE
 // ============================================================
+
+/**
+ * renderReview — render the "Wrong Answers" review table.
+ * Reads state.wrongAnswers (sorted by count desc so worst offenders appear first)
+ * and builds an HTML table with domain filter, question preview, wrong count badge,
+ * last-wrong date, and a "Study" button to drill into a single question.
+ * Empty state message shown when no wrong answers have been recorded yet.
+ */
 function renderReview() {
   // Populate filter
   const filter = document.getElementById('review-filter');
@@ -1380,6 +1566,13 @@ function renderReview() {
   container.innerHTML = html;
 }
 
+/**
+ * reviewSingleQuestion — launch a one-question quiz for a specific wrong answer.
+ * Reuses the full quiz engine (quizQuestions/currentQIndex/quizAnswers) with a
+ * single-item array so the user gets the same answer-reveal and Claude button
+ * experience as a regular quiz. The question ID is looked up in QUESTION_BANK
+ * because wrong-answer records only store the ID, not the full question object.
+ */
 function reviewSingleQuestion(qId) {
   const q = QUESTION_BANK.find(q => q.id === qId);
   if (!q) return;
@@ -1395,6 +1588,12 @@ function reviewSingleQuestion(qId) {
   }, 100);
 }
 
+/**
+ * clearWrongAnswers — wipe the in-memory wrong answer list and re-render.
+ * Note: this clears localStorage only (no backend call). Use
+ * clearWrongAnswersWithBackend() (below) if SQLite should also be cleared.
+ * Double-confirm via browser dialog prevents accidental data loss.
+ */
 function clearWrongAnswers() {
   if (confirm('Clear all wrong answer records? This cannot be undone.')) {
     state.wrongAnswers = [];
@@ -1406,6 +1605,17 @@ function clearWrongAnswers() {
 // ============================================================
 // ANALYTICS
 // ============================================================
+
+/**
+ * renderAnalytics — build the Analytics dashboard: two Chart.js charts + weakness cards.
+ * Chart 1 (bar): accuracy % per domain — immediately shows which domains need work.
+ * Chart 2 (bar): 14-day rolling activity (answered vs correct) — shows study consistency.
+ * Why destroy before re-create? Chart.js accumulates canvas state; calling destroy()
+ * prevents memory leaks and duplicate legends when the tab is revisited.
+ * Weakness cards (bottom 4 domains by accuracy) include a direct "Practice" button
+ * so the user can act immediately without navigating away.
+ * Study plan card visibility is gated on hasApiKey — only shown when an LLM is configured.
+ */
 function renderAnalytics() {
   // Domain chart
   const ctx1 = document.getElementById('chart-domain').getContext('2d');
@@ -1501,6 +1711,17 @@ function renderAnalytics() {
 // ============================================================
 // DOMAIN GUIDE
 // ============================================================
+
+/**
+ * renderDomains — render the 8 CISSP domain reference cards.
+ * Each card shows: domain weight on the real exam, key topics, critical controls,
+ * an exam tip, the user's current accuracy badge, and two action buttons:
+ *   1. "Practice Domain N" — pre-selects only this domain in the quiz setup
+ *   2. "Generate 5 More Questions" (shown only when hasApiKey) — calls the
+ *      AI question-generation endpoint to expand the question bank for this domain
+ * Domain cards are generated from DOMAIN_GUIDE data so adding a new domain only
+ * requires updating that array, not this rendering function.
+ */
 function renderDomains() {
   const container = document.getElementById('domain-guide-list');
   container.innerHTML = '';
@@ -1547,6 +1768,13 @@ function renderDomains() {
 // ============================================================
 // ─── Export / Import / Reset ────────────────────────────────────────────────
 
+/**
+ * exportData — serialize the entire state object to JSON and trigger a file download.
+ * Uses a Blob + temporary <a> element (the "invisible anchor" trick) since the
+ * File System Access API is not universally supported. The filename includes today's
+ * date so multiple backups don't overwrite each other.
+ * URL.revokeObjectURL cleans up the in-memory blob URL after download starts.
+ */
 function exportData() {
   const data = JSON.stringify(state, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
@@ -1558,8 +1786,18 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+// pendingImportData — holds the parsed JSON from the file picker until the user
+// clicks "Confirm Import". Staging it here lets us show a preview first and
+// give the user a chance to cancel before overwriting their live progress data.
 let pendingImportData = null;
 
+/**
+ * handleImportFile — read a backup JSON file selected via <input type="file">.
+ * Uses FileReader (async, non-blocking) to load the file content as text,
+ * then JSON.parse it and show a preview summary (question count, accuracy, etc.)
+ * before anything is written. Errors (invalid JSON, wrong file) are caught and
+ * shown inline rather than thrown, so the page stays responsive.
+ */
 function handleImportFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1592,6 +1830,13 @@ function handleImportFile(event) {
   reader.readAsText(file);
 }
 
+/**
+ * confirmImport — apply the staged backup to both localStorage and SQLite.
+ * Two-phase write: local first (instant, works offline), then backend if available.
+ * Spreads pendingImportData over emptyState() so any missing fields in an older
+ * backup file are filled with safe defaults rather than crashing.
+ * After import, syncs state back from backend to ensure localStorage mirrors SQLite.
+ */
 async function confirmImport() {
   if (!pendingImportData) return;
   if (!confirm('This will replace your current study progress with the backup. Continue?')) return;
@@ -1625,6 +1870,13 @@ async function confirmImport() {
   renderDashboard();
 }
 
+/**
+ * resetAllData — wipe all study progress from both localStorage and SQLite.
+ * Double-confirm pattern: two consecutive browser dialogs make accidental
+ * destruction much less likely (user must click OK twice).
+ * Pushes an emptyState() object to the backend /api/import endpoint so the
+ * SQLite database is also cleared — not just the browser cache.
+ */
 async function resetAllData() {
   if (confirm('⚠️ Reset ALL study progress? This cannot be undone.')) {
     if (confirm('Are you absolutely sure? Export a backup first from Settings if you want to preserve your data.')) {
@@ -1647,6 +1899,12 @@ async function resetAllData() {
   }
 }
 
+/**
+ * clearWrongAnswersWithBackend — full clear: localStorage + SQLite.
+ * Unlike the localStorage-only clearWrongAnswers(), this also calls
+ * /api/clear-wrong on the backend so the SQLite wrong_answers table
+ * is truncated. Used by the Settings page "Clear Wrong Answers" button.
+ */
 async function clearWrongAnswersWithBackend() {
   state.wrongAnswers = [];
   saveState();
@@ -1659,6 +1917,15 @@ async function clearWrongAnswersWithBackend() {
 }
 
 // ─── Settings page render ────────────────────────────────────────────────────
+
+/**
+ * renderSettings — populate the Settings page on every visit.
+ * Calls updateClaudeStatusBadge() and loadLLMProviderUI() to refresh the
+ * AI connection status in case the user saved a key in another tab.
+ * Renders a contextual storage-mode banner: green SQLite card when the backend
+ * is reachable, amber localStorage-only warning with server start instructions
+ * when offline. This makes the storage mode immediately obvious at a glance.
+ */
 function renderSettings() {
   updateClaudeStatusBadge();
   loadLLMProviderUI();
@@ -1687,9 +1954,25 @@ function renderSettings() {
 // ============================================================
 // CLAUDE AI
 // ============================================================
-let hasApiKey = false;
-const claudeCache = {}; // cache explanations by question id
 
+// hasApiKey — true when the server has a valid LLM provider key configured.
+// Controls visibility of "Ask Claude" buttons and the study-plan card.
+// Refreshed on page load and after each save via checkApiKeyStatus().
+let hasApiKey = false;
+
+// claudeCache — in-memory cache keyed by "{questionId}-correct|wrong".
+// Avoids redundant API calls when the user revisits the same question.
+// Separate keys for correct vs wrong because the prompt (and response) differs.
+// Cleared only on page reload — intentionally ephemeral, not persisted.
+const claudeCache = {};
+
+/**
+ * checkApiKeyStatus — query /api/config to see whether an LLM key is saved.
+ * Updates the global hasApiKey flag and the status badge in the UI.
+ * Also shows/hides the study-plan card on the Analytics page.
+ * Silent on failure (catch block): if the server is offline, hasApiKey stays false
+ * and AI features remain hidden without throwing an uncaught error.
+ */
 async function checkApiKeyStatus() {
   if (!USE_BACKEND) return;
   try {
@@ -1703,6 +1986,11 @@ async function checkApiKeyStatus() {
   } catch(e) { hasApiKey = false; }
 }
 
+/**
+ * updateClaudeStatusBadge — flip the Settings page status badge between
+ * "✅ Connected" (green) and "⚠️ Not configured" (amber).
+ * Called after checkApiKeyStatus() and after saveApiKey() succeeds.
+ */
 function updateClaudeStatusBadge() {
   const badge = document.getElementById('claude-status-badge');
   if (!badge) return;
@@ -1715,6 +2003,13 @@ function updateClaudeStatusBadge() {
   }
 }
 
+/**
+ * saveApiKey — validate and persist a Claude API key via POST /api/config.
+ * Client-side validation: key must start with "sk-ant-" (Anthropic format).
+ * On success: sets hasApiKey=true, clears the input (security hygiene),
+ * and updates the status badge. The key itself is never stored in the browser —
+ * it lives only in cissp_config.json on the server side.
+ */
 async function saveApiKey() {
   const input = document.getElementById('api-key-input');
   const statusEl = document.getElementById('api-key-status');
@@ -1740,6 +2035,12 @@ async function saveApiKey() {
   } catch(e) { showApiKeyStatus('Server not running — start cissp_server.py first.', 'error'); }
 }
 
+/**
+ * testApiKey — fire a real /api/claude/explain request with a dummy question
+ * to verify end-to-end connectivity (server → LLM provider → back).
+ * Uses the same endpoint as production so it catches auth errors, quota issues,
+ * and network problems that a simple /api/config ping would miss.
+ */
 async function testApiKey() {
   const statusEl = document.getElementById('api-key-status');
   showApiKeyStatus('🔌 Testing connection...', 'info');
@@ -1765,6 +2066,11 @@ async function testApiKey() {
   } catch(e) { showApiKeyStatus('Cannot reach server or Claude API. Check your key and server.', 'error'); }
 }
 
+/**
+ * showApiKeyStatus — display a colour-coded inline status message below the API key input.
+ * type: 'success' (green), 'error' (red), 'info' (teal).
+ * Centralised here so saveApiKey() and testApiKey() share the same styling logic.
+ */
 function showApiKeyStatus(msg, type) {
   const el = document.getElementById('api-key-status');
   if (!el) return;
@@ -1777,6 +2083,15 @@ function showApiKeyStatus(msg, type) {
   el.style.color = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#374151';
 }
 
+/**
+ * askClaudeExplain — request a deep AI explanation for a quiz question.
+ * Cache check first: if claudeCache already has a result for this question+outcome
+ * combination, render it immediately without a network round-trip.
+ * Why separate cache keys for correct vs wrong? The system prompt and response
+ * structure differ — wrong answers get "why you were wrong + what to study",
+ * correct answers get "why this is right + why others are wrong".
+ * On error: re-enables the button so the user can retry rather than being stuck.
+ */
 async function askClaudeExplain(q, selectedIdx) {
   const btn = document.getElementById('btn-ask-claude');
   const area = document.getElementById('claude-explanation-area');
@@ -1831,7 +2146,16 @@ async function askClaudeExplain(q, selectedIdx) {
   }
 }
 
-// Convert any Claude field value to safe HTML — handles strings, arrays, and objects
+/**
+ * claudeFieldToHtml — safely render any LLM response field as HTML.
+ * Why needed? LLMs return inconsistent types for the same field across calls:
+ *   - string  → wrap in <p>
+ *   - string[] → bullet list
+ *   - object[] (e.g. [{option:"A", reason:"..."}]) → bullet list with bold keys
+ *   - plain object (e.g. {A:"reason", B:"reason"}) → bullet list with bold keys
+ * Centralising this prevents [object Object] from appearing in the UI when the
+ * LLM returns a structured object where we expected a plain string.
+ */
 function claudeFieldToHtml(value) {
   if (!value) return '';
   if (typeof value === 'string') return `<p>${value}</p>`;
@@ -1856,6 +2180,16 @@ function claudeFieldToHtml(value) {
   return `<p>${String(value)}</p>`;
 }
 
+/**
+ * renderClaudeExplanation — build the Claude explanation card HTML and inject it.
+ * Sections rendered conditionally (only if data contains that field):
+ *   - whyCorrect / whyWrong  (order swapped depending on isCorrect flag)
+ *   - studyFocus             (what concepts to review next)
+ *   - memoryTip              (mnemonic or mental model for exam day)
+ * Shows a "From DB cache" badge when data._cached is true (served from SQLite,
+ * not a fresh API call) so the user knows their quota wasn't consumed again.
+ * All field values go through claudeFieldToHtml() to handle mixed LLM output types.
+ */
 function renderClaudeExplanation(area, data, isCorrect) {
   const title = isCorrect ? '🤖 Claude\'s Analysis — Correct Answer' : '🤖 Claude\'s Deep Explanation';
   const cachedBadge = data._cached
@@ -1887,6 +2221,15 @@ function renderClaudeExplanation(area, data, isCorrect) {
   area.innerHTML = html;
 }
 
+/**
+ * generateQuestionsForDomain — call the AI to create 5 new practice questions
+ * for a specific CISSP domain and append them to the in-memory QUESTION_BANK.
+ * Passes existingIds so the LLM avoids regenerating questions already in the bank.
+ * Why in-memory only? Generated questions are session-scoped — they don't persist
+ * across reloads. This keeps the static question bank (in the HTML file) as the
+ * source of truth while still letting users expand their practice set on demand.
+ * renderDomains() is called after insert to update the question-count badge.
+ */
 async function generateQuestionsForDomain(domainId, domainName) {
   const btn = document.getElementById(`gen-q-btn-${domainId}`);
   const statusEl = document.getElementById(`gen-q-status-${domainId}`);
@@ -1927,6 +2270,15 @@ async function generateQuestionsForDomain(domainId, domainName) {
   }
 }
 
+/**
+ * generateStudyPlan — request a personalised AI study plan from /api/claude/study-plan.
+ * Sends the user's per-domain stats and optional target exam date so the LLM can
+ * prioritise weak domains and fit the plan to the available time window.
+ * On success, passes the response to renderStudyPlan() which handles both the
+ * well-formed JSON case and the edge case where the server returned raw LLM text
+ * (frontend safety-net re-parse is inside renderStudyPlan).
+ * Button label changes to "Regenerate Plan" after first call so intent is clear.
+ */
 async function generateStudyPlan() {
   const btn = document.getElementById('btn-generate-plan');
   const output = document.getElementById('study-plan-output');
@@ -1957,6 +2309,17 @@ async function generateStudyPlan() {
   btn.textContent = '📅 Regenerate Plan';
 }
 
+/**
+ * renderStudyPlan — convert a structured study plan object into formatted HTML.
+ * Frontend safety-net: if server-side JSON parsing failed (e.g. LLM returned
+ * a code-fenced block), data.readinessAssessment will contain the raw LLM text.
+ * Two re-parse attempts handle this: strip fences then JSON.parse, or extract
+ * the first {...} block with a regex. This mirrors the server's _parse_llm_json()
+ * strategy so the UI degrades gracefully rather than showing raw JSON to the user.
+ * Sections (readiness, priority order, weekly plan, recommendations, checklist)
+ * are each rendered conditionally — missing sections are silently skipped.
+ * Stores the resolved data in window._studyPlanData so export functions can read it.
+ */
 function renderStudyPlan(data) {
   // Safety net: if the server couldn't parse the LLM JSON, it puts the raw LLM text
   // into data.readinessAssessment. We detect this and try to parse it in the browser.
@@ -2051,12 +2414,26 @@ function renderStudyPlan(data) {
   return html;
 }
 
+/**
+ * escHtml — escape user-facing text before inserting into innerHTML.
+ * Prevents XSS: LLM output is untrusted and may contain <script> tags or
+ * HTML entities. Applied to every string rendered from AI responses.
+ * The 5 replacements cover the full set of HTML special characters.
+ */
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/**
+ * exportStudyPlanCSV — download the study plan as a UTF-8 CSV file.
+ * BOM (\uFEFF) prepended so Excel on Windows opens it with correct encoding
+ * instead of garbling accented characters and special symbols.
+ * Each logical section (readiness, priority, weeks, recommendations, checklist)
+ * maps to rows with Section / Item / Details columns for easy filtering in Excel.
+ * Uses the invisible anchor trick (same as exportData) to trigger the download.
+ */
 function exportStudyPlanCSV() {
   const data = window._studyPlanData;
   if (!data) return;
@@ -2092,6 +2469,15 @@ function exportStudyPlanCSV() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+/**
+ * exportStudyPlanExcel — download the study plan as a styled .xls file.
+ * Uses the "HTML table in an Excel MIME wrapper" trick: Excel on Windows/Mac
+ * opens .xls files that are actually HTML tables, respecting inline CSS styles.
+ * Why not .xlsx? Generating a real XLSX requires a library (e.g. SheetJS).
+ * The HTML-as-XLS approach works with zero dependencies and produces a
+ * colour-coded, readable spreadsheet with section headers, weekly rows, and
+ * a title row — without any npm install.
+ */
 function exportStudyPlanExcel() {
   const data = window._studyPlanData;
   if (!data) return;
@@ -2145,6 +2531,13 @@ ${rows}
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+/**
+ * copyStudyPlan — copy the rendered study plan text to the clipboard.
+ * Uses navigator.clipboard (async Clipboard API) which requires a secure context
+ * (HTTPS or localhost). innerText is used instead of innerHTML so the copied
+ * text is plain readable text, not raw HTML tags.
+ * Button label temporarily changes to "✅ Copied!" for 2 seconds as visual feedback.
+ */
 function copyStudyPlan(btn) {
   const planText = document.getElementById('study-plan-output').innerText;
   navigator.clipboard.writeText(planText).then(() => {
@@ -2156,6 +2549,17 @@ function copyStudyPlan(btn) {
 // ============================================================
 // MOCK EXAM ENGINE
 // ============================================================
+
+// mockExam — single object holding all state for the current exam session.
+//   questions   : ordered array of question objects sampled for this exam
+//   answers     : { questionIndex: selectedOptionIndex } — sparse, unanswered = undefined
+//   flags       : Set of question indices the user flagged for review
+//   currentIdx  : which question is displayed right now
+//   examId      : SQLite row ID returned by /api/mock-exam/start (null if offline)
+//   startTime   : Date.now() at exam start — used to compute elapsed time on results
+//   timerSeconds: countdown value; 0 means no timer
+//   timerInterval: setInterval handle so the timer can be stopped on submit/quit
+//   submitted   : guard flag — prevents double-submission if submit is called twice
 let mockExam = {
   questions: [], answers: {}, flags: new Set(),
   currentIdx: 0, examId: null,
@@ -2163,17 +2567,29 @@ let mockExam = {
   submitted: false
 };
 
+// DOMAIN_WEIGHTS — official ISC² CISSP exam domain weightings (2024 CBK).
+// Used by domain-weighted sampling so the mock exam mirrors the real exam's
+// proportional representation of each domain.
 const DOMAIN_WEIGHTS = [
   { id:1, weight:0.16 }, { id:2, weight:0.10 }, { id:3, weight:0.13 },
   { id:4, weight:0.13 }, { id:5, weight:0.13 }, { id:6, weight:0.12 },
   { id:7, weight:0.13 }, { id:8, weight:0.10 }
 ];
 
+/**
+ * renderMockExamSetup — entry point when navigating to the Mock Exam tab.
+ * Shows the setup screen and loads recent attempt history in the sidebar.
+ */
 function renderMockExamSetup() {
   showMockExamSetup();
   loadMockExamHistory();
 }
 
+/**
+ * showMockExamSetup — reset the mock exam page to show only the setup panel.
+ * Also clears any running timer interval so it doesn't keep ticking in the
+ * background if the user navigates away mid-exam without submitting.
+ */
 function showMockExamSetup() {
   document.getElementById('mockexam-setup').style.display = 'block';
   document.getElementById('mockexam-active').style.display = 'none';
@@ -2181,6 +2597,14 @@ function showMockExamSetup() {
   if (mockExam.timerInterval) { clearInterval(mockExam.timerInterval); mockExam.timerInterval = null; }
 }
 
+/**
+ * loadMockExamHistory — fetch and render the last 5 mock exam attempts.
+ * Source depends on storage mode: SQLite via /api/mock-exam/history when backend
+ * is available, otherwise falls back to localStorage key 'mock_exam_history'.
+ * Each history card shows attempt number, date, question count, score, and
+ * pass/fail status. "In Progress" status is shown for exams that were started
+ * but never submitted (e.g. browser was closed mid-exam).
+ */
 async function loadMockExamHistory() {
   const container = document.getElementById('mockexam-history-mini');
   if (!container) return;
@@ -2214,6 +2638,20 @@ async function loadMockExamHistory() {
   }).join('');
 }
 
+/**
+ * startMockExam — build and launch a new mock exam session.
+ * Sampling modes:
+ *   'domain-weighted' — allocates questions proportionally per DOMAIN_WEIGHTS so
+ *                       the exam mirrors the real CISSP distribution.
+ *                       Any rounding shortfall is filled from the remaining pool.
+ *   'random'          — pure random shuffle, no domain weighting.
+ * Timer modes:
+ *   'proportional'    — 1.92 min/question (matches CISSP's 4h for 125 questions).
+ *   '240'             — fixed 4-hour window regardless of question count.
+ *   'none'            — untimed practice mode.
+ * Resets the mockExam state object entirely so previous exam data doesn't bleed in.
+ * POSTs to /api/mock-exam/start (fire-and-forget) to record the exam start in SQLite.
+ */
 function startMockExam() {
   const countVal = parseInt(document.getElementById('mock-q-count').value);
   const timerMode = document.getElementById('mock-timer-mode').value;
@@ -2277,6 +2715,13 @@ function startMockExam() {
   if (timerSecs > 0) startExamTimer(timerSecs);
 }
 
+/**
+ * startExamTimer — start a 1-second countdown interval for the exam.
+ * When remaining hits 0, auto-submits via submitMockExam(true) (timeExpired=true)
+ * so the results screen notes that time ran out.
+ * The interval handle is stored in mockExam.timerInterval so it can be cleared
+ * when the user submits early or navigates away.
+ */
 function startExamTimer(totalSecs) {
   let remaining = totalSecs;
   updateTimerDisplay(remaining);
@@ -2290,6 +2735,14 @@ function startExamTimer(totalSecs) {
   }, 1000);
 }
 
+/**
+ * updateTimerDisplay — format remaining seconds as H:MM:SS and colour the timer.
+ * Color thresholds match common test-anxiety cues:
+ *   normal  → default styling
+ *   ≤15 min → 'warning' class (amber)
+ *   ≤5 min  → 'critical' class (red + bold) to signal urgency
+ *   0       → freeze at "0:00:00" in critical style
+ */
 function updateTimerDisplay(secs) {
   const el = document.getElementById('exam-timer-display');
   if (!el) return;
@@ -2303,6 +2756,16 @@ function updateTimerDisplay(secs) {
   else if (secs <= 900) el.className = 'exam-timer warning';
 }
 
+/**
+ * renderExamQuestion — draw the current exam question in CBT (Computer-Based Test) style.
+ * Unlike the practice quiz, the exam does NOT reveal the correct answer immediately —
+ * answers are only revealed after the full exam is submitted.
+ * Previously selected answer is shown with a highlight (re-render on every navigation).
+ * Progress bar reflects answered count, not current index, to show overall completion.
+ * Flag button toggles a visual indicator so the user can return to uncertain questions.
+ * "Review & Submit →" label replaces "Next →" on the last question.
+ * Also calls renderExamDots() to sync the question-map grid after every navigation.
+ */
 function renderExamQuestion() {
   const q = mockExam.questions[mockExam.currentIdx];
   const total = mockExam.questions.length;
@@ -2345,11 +2808,22 @@ function renderExamQuestion() {
   renderExamDots();
 }
 
+/**
+ * selectExamAnswer — record a selected option for a question.
+ * Overwrites any previous selection for the same question index (allows changing
+ * answers before submission, matching real CBT exam behaviour).
+ * Re-renders the question so the chosen option is highlighted immediately.
+ */
 function selectExamAnswer(questionIdx, optionIdx) {
   mockExam.answers[questionIdx] = optionIdx;
   renderExamQuestion(); // re-render to show selection
 }
 
+/**
+ * toggleExamFlag — add or remove the current question from the flags Set.
+ * Flagged questions appear with a distinct colour in the question-map grid
+ * so the user can easily return to review them before submitting.
+ */
 function toggleExamFlag() {
   const idx = mockExam.currentIdx;
   if (mockExam.flags.has(idx)) mockExam.flags.delete(idx);
@@ -2357,6 +2831,11 @@ function toggleExamFlag() {
   renderExamQuestion();
 }
 
+/**
+ * examNavQuestion — navigate forward (delta=+1) or backward (delta=-1) through exam questions.
+ * Going past the last question triggers confirmSubmitExam() instead of wrapping around,
+ * matching the "Next → Review & Submit" flow on the final question.
+ */
 function examNavQuestion(delta) {
   const total = mockExam.questions.length;
   const newIdx = mockExam.currentIdx + delta;
@@ -2366,6 +2845,12 @@ function examNavQuestion(delta) {
   renderExamQuestion();
 }
 
+/**
+ * toggleExamNav — show/hide the question-map grid panel.
+ * The grid (renderExamDots) shows every question as a numbered dot colour-coded
+ * by state: current (blue), answered (green), flagged (amber), unanswered (grey).
+ * Toggling it gives users a compact overview without permanently occupying screen space.
+ */
 function toggleExamNav() {
   const grid = document.getElementById('exam-nav-grid');
   const btn = document.getElementById('exam-nav-toggle');
@@ -2373,6 +2858,16 @@ function toggleExamNav() {
   else { grid.style.display = 'none'; btn.textContent = '📋 Question Map'; }
 }
 
+/**
+ * renderExamDots — rebuild the question-map dot grid.
+ * Each dot is a clickable div that jumps directly to that question.
+ * CSS classes applied per state (in priority order):
+ *   'current'  — the question currently displayed
+ *   'flagged'  — user marked for review (checked before 'answered' so flagged
+ *                answered questions show amber, not green)
+ *   'answered' — a selection has been recorded
+ *   (none)     — unanswered, not flagged
+ */
 function renderExamDots() {
   const container = document.getElementById('exam-q-dots');
   if (!container) return;
@@ -2390,6 +2885,12 @@ function renderExamDots() {
   });
 }
 
+/**
+ * confirmSubmitExam — show a submit confirmation dialog summarising unanswered
+ * and flagged questions so the user can make an informed decision.
+ * Lists counts in the dialog message rather than just "Are you sure?" to give
+ * the user meaningful context (e.g. "⚠️ 3 questions unanswered").
+ */
 function confirmSubmitExam() {
   const total = mockExam.questions.length;
   const answered = Object.keys(mockExam.answers).length;
@@ -2401,6 +2902,17 @@ function confirmSubmitExam() {
   if (confirm(msg)) submitMockExam(false);
 }
 
+/**
+ * submitMockExam — grade the exam and persist results.
+ * Guard: mockExam.submitted flag prevents double-grading if called twice
+ * (e.g. timer fires at the same moment the user clicks Submit).
+ * Grading loop: iterates all questions, compares mockExam.answers[i] to q.answer.
+ * Unanswered questions (answers[i] === undefined) count as wrong.
+ * Results saved to two places:
+ *   1. SQLite via /api/mock-exam/submit (fire-and-forget, only if examId exists)
+ *   2. localStorage 'mock_exam_history' array (capped at 5 entries) for offline use
+ * timeExpired=true adds a "(Time Expired)" note on the results screen.
+ */
 function submitMockExam(timeExpired) {
   if (mockExam.submitted) return;
   mockExam.submitted = true;
@@ -2457,6 +2969,15 @@ function submitMockExam(timeExpired) {
   showExamResults(pct, correct, total, domainResults, elapsed, passed, timeExpired);
 }
 
+/**
+ * showExamResults — render the post-exam results screen.
+ * Displays: overall score %, pass/fail badge, correct/total count, time used,
+ * and a per-domain progress bar breakdown so the user can see exactly which
+ * domains need more study before their real exam.
+ * Domain rows with 0 answered questions are skipped (not all domains may be
+ * represented if a small question count was chosen).
+ * The "Review Answers" section is hidden by default — revealed by reviewExamAnswers().
+ */
 function showExamResults(pct, correct, total, domainResults, elapsedSecs, passed, timeExpired) {
   document.getElementById('mockexam-setup').style.display = 'none';
   document.getElementById('mockexam-active').style.display = 'none';
@@ -2493,6 +3014,16 @@ function showExamResults(pct, correct, total, domainResults, elapsedSecs, passed
   document.getElementById('exam-review-section').style.display = 'none';
 }
 
+/**
+ * reviewExamAnswers — expand the answer-review section below exam results.
+ * Renders every question with colour-coded option rows:
+ *   green border  — correct answer (always highlighted)
+ *   red border    — user's wrong selection
+ *   no highlight  — unchosen options
+ * Skipped questions show "⬜ Skipped" status with a neutral grey border.
+ * scrollIntoView gives the user a smooth scroll to the review section
+ * rather than making them manually scroll down a long results page.
+ */
 function reviewExamAnswers() {
   const section = document.getElementById('exam-review-section');
   const list = document.getElementById('exam-review-list');
@@ -2528,8 +3059,17 @@ function reviewExamAnswers() {
 // ============================================================
 // MULTI-LLM PROVIDER SETTINGS
 // ============================================================
+
+// llmConfig — tracks the active LLM provider and saved field values.
+//   provider  : 'claude' | 'gemini' | 'ollama' | 'openai' — which backend to use
+//   providers : { [providerName]: { key, url, model, ... } } — saved config per provider
+// Loaded from /api/config on Settings page open; updated after each successful save.
 let llmConfig = { provider: 'claude', providers: {} };
 
+// PROVIDER_FIELDS — field definitions for each LLM provider's configuration form.
+// Each entry defines the input id, label, type (text/password), placeholder, and hint.
+// The Settings page dynamically renders whichever provider's fields are needed based
+// on the dropdown selection — adding a new provider only requires a new entry here.
 const PROVIDER_FIELDS = {
   claude: [
     { id:'claude-key', label:'API Key', type:'password', placeholder:'sk-ant-api03-...', hint:'Get at console.anthropic.com → API Keys' }
@@ -2548,6 +3088,13 @@ const PROVIDER_FIELDS = {
   ]
 };
 
+/**
+ * loadLLMProviderUI — fetch current provider config from the server and populate
+ * the LLM settings form. Sets the dropdown to the active provider, updates the
+ * "Active:" badge, and renders the provider-specific input fields.
+ * Called every time the Settings page is opened so it reflects any changes made
+ * by another browser tab or direct edits to cissp_config.json.
+ */
 async function loadLLMProviderUI() {
   if (!USE_BACKEND) return;
   try {
@@ -2562,6 +3109,11 @@ async function loadLLMProviderUI() {
   } catch(e) {}
 }
 
+/**
+ * updateLLMActiveBadge — update the "Active: Claude/Gemini/..." badge in Settings.
+ * Uses a local display-name map so the badge shows a human-friendly name rather
+ * than the internal provider key (e.g. "OpenAI-Compat" instead of "openai").
+ */
 function updateLLMActiveBadge() {
   const badge = document.getElementById('llm-active-badge');
   if (!badge) return;
@@ -2569,6 +3121,14 @@ function updateLLMActiveBadge() {
   badge.textContent = '✅ ' + (names[llmConfig.provider] || llmConfig.provider);
 }
 
+/**
+ * renderProviderFields — dynamically render the input fields for the selected provider.
+ * Reads the current dropdown value, looks up the field definitions in PROVIDER_FIELDS,
+ * and pre-populates values from llmConfig.providers if the user has saved them before.
+ * Called on dropdown change (onchange) and after loadLLMProviderUI() completes.
+ * Why dynamic? Each provider needs different credentials (key only, key+url, url+model)
+ * — rendering them from a data structure avoids duplicating markup for each provider.
+ */
 function renderProviderFields() {
   const container = document.getElementById('llm-provider-fields');
   if (!container) return;
@@ -2585,6 +3145,11 @@ function renderProviderFields() {
     </div>`).join('');
 }
 
+/**
+ * getProviderFieldValues — collect current input values for a given provider's fields.
+ * Returns a plain object keyed by field id (e.g. { 'claude-key': 'sk-ant-...' }).
+ * Used by saveLLMProvider() to build the payload sent to /api/config.
+ */
 function getProviderFieldValues(provider) {
   const config = {};
   (PROVIDER_FIELDS[provider] || []).forEach(f => {
@@ -2594,6 +3159,13 @@ function getProviderFieldValues(provider) {
   return config;
 }
 
+/**
+ * saveLLMProvider — persist the selected LLM provider and its credentials.
+ * POSTs { provider, providerConfig } to /api/config which writes cissp_config.json.
+ * On success: updates llmConfig, sets hasApiKey=true, and shows the study-plan card.
+ * The field-id-to-short-key mapping (f.id.split('-')[1]) converts e.g. 'claude-key'
+ * → 'key', 'ollama-url' → 'url' so the backend receives compact config keys.
+ */
 async function saveLLMProvider() {
   const sel = document.getElementById('llm-provider-select');
   const provider = sel ? sel.value : 'claude';
@@ -2636,6 +3208,14 @@ async function saveLLMProvider() {
   }
 }
 
+/**
+ * testLLMProvider — verify the active LLM provider end-to-end with a live API call.
+ * Reuses the /api/claude/explain endpoint (which routes through the active provider)
+ * with a trivial CIA Triad question so we exercise the full request path:
+ * browser → Python server → LLM provider API → back.
+ * This catches auth failures, wrong model names, and unreachable Ollama instances
+ * that a simple config-read check wouldn't detect.
+ */
 async function testLLMProvider() {
   showLLMStatus('🔌 Testing connection...', 'info');
   try {
@@ -2659,6 +3239,11 @@ async function testLLMProvider() {
   }
 }
 
+/**
+ * showLLMStatus — display a colour-coded inline status message in the LLM settings section.
+ * Mirrors showApiKeyStatus() in style but targets the LLM provider status element.
+ * type: 'success' (green), 'error' (red), 'info' (teal).
+ */
 function showLLMStatus(msg, type) {
   const el = document.getElementById('llm-provider-status');
   if (!el) return;
@@ -2674,6 +3259,18 @@ function showLLMStatus(msg, type) {
 // ============================================================
 // INIT
 // ============================================================
+
+/**
+ * init — application bootstrap (IIFE, runs once on page load).
+ * Sequence:
+ *   1. detectBackend()       — probe localhost:5432 (1.2s timeout)
+ *   2. syncStateFromBackend() — if server found, load SQLite state into memory
+ *   3. checkApiKeyStatus()   — fetch LLM config so AI buttons show/hide correctly
+ *   4. renderDashboard()     — paint the initial view
+ * Why async IIFE? The three awaits must run in order (each depends on the previous),
+ * but the app should not block the browser's main thread while waiting for the server.
+ * Sets the exam date picker's min to today so the user can't pick a past date.
+ */
 (async function init() {
   // Try to connect to local SQLite backend
   await detectBackend();
