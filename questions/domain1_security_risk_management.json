@@ -1,0 +1,377 @@
+[
+  {
+    "id": 1001,
+    "domain": 1,
+    "text": "A multinational corporation is expanding operations into the European Union. Their legal team has identified that the company processes personal data of EU residents for marketing analytics. The CISO must ensure compliance within six months. Which framework should be the PRIMARY governance foundation, and what is the most critical first step?",
+    "options": [
+      "Implement ISO 27001 controls and conduct a gap analysis against current practices",
+      "Conduct a data mapping exercise to identify all personal data flows, then appoint a Data Protection Officer and implement GDPR controls",
+      "Purchase cyber liability insurance to cover potential GDPR fines and notify regulators of the expansion",
+      "Implement SOC 2 Type II controls since the company already operates in the US under similar privacy principles"
+    ],
+    "answer": 1,
+    "explanation": "GDPR compliance begins with understanding what personal data you process and where it flows. A Data Protection Officer (DPO) may be required for large-scale systematic monitoring. Data mapping is the foundational step that informs all subsequent GDPR controls. ISO 27001 and SOC 2 are valuable but do not replace GDPR-specific requirements.",
+    "weakness": "Privacy regulation compliance, GDPR requirements",
+    "references": ["https://gdpr.eu/article-37-data-protection-officer/", "https://www.nist.gov/privacy-framework"]
+  },
+  {
+    "id": 1002,
+    "domain": 1,
+    "text": "During an enterprise risk assessment, your team quantifies a threat scenario: a ransomware attack has a 30% Annual Rate of Occurrence (ARO), and the Asset Value (AV) is $2,000,000 with an Exposure Factor (EF) of 60%. The proposed control costs $180,000 annually and would reduce EF to 20%. What is the annualized cost savings and should the control be implemented based purely on quantitative analysis?",
+    "options": [
+      "ALE before: $360,000; ALE after: $120,000; savings: $240,000/yr; control cost $180,000; net benefit $60,000 — implement the control",
+      "ALE before: $600,000; ALE after: $200,000; savings: $400,000/yr; control cost $180,000; net benefit $220,000 — implement the control",
+      "ALE before: $360,000; ALE after: $120,000; savings: $240,000/yr; control cost $180,000; net benefit $60,000 — do not implement, margin too thin",
+      "ALE before: $600,000; ALE after: $600,000; savings: $0; the control does not change ALE because ransomware probability is unchanged"
+    ],
+    "answer": 0,
+    "explanation": "ALE = AV × EF × ARO. Before: $2,000,000 × 0.60 × 0.30 = $360,000. After: $2,000,000 × 0.20 × 0.30 = $120,000. Annual savings = $240,000. Control cost = $180,000. Net benefit = $60,000/year positive ROI — implement the control. The CISSP formula: SLE = AV × EF; ALE = SLE × ARO.",
+    "weakness": "Quantitative risk analysis, ALE calculations",
+    "references": ["https://www.nist.gov/pubs/sp/800/30/r1/final"]
+  },
+  {
+    "id": 1003,
+    "domain": 1,
+    "text": "A financial services company experiences a data breach affecting 50,000 customer records. The CEO wants to publicly deny any wrongdoing before the investigation concludes. As CISO, you advise against this. Which legal principle MOST supports your position that premature statements could increase organizational liability?",
+    "options": [
+      "The Sarbanes-Oxley Act requires accurate financial disclosures and premature denials could constitute securities fraud",
+      "Spoilation of evidence doctrine — public statements could influence witness testimony and constitute obstruction",
+      "The legal concept of res ipsa loquitur — the breach itself implies negligence without further proof needed",
+      "Attorney-client privilege requires all breach communications go through legal counsel before public disclosure"
+    ],
+    "answer": 0,
+    "explanation": "For a financial services company, SOX Section 302 and 906 require executives to certify the accuracy of disclosures. Premature denial of wrongdoing before investigation completion could constitute securities fraud if material facts are misrepresented. While attorney-client privilege is relevant, SOX creates specific criminal liability for knowingly false certifications — the most direct risk in a financial services context.",
+    "weakness": "Legal and regulatory compliance, securities law",
+    "references": ["https://www.sec.gov/divisions/corpfin/guidance/sox-section-302-faq.htm"]
+  },
+  {
+    "id": 1004,
+    "domain": 1,
+    "text": "Your organization is using a risk management framework. Senior leadership asks for a risk treatment decision on a vulnerability in a legacy system that controls HVAC in a data center. The system cannot be patched. Risk assessment shows: Likelihood: High; Impact: Critical (data center downtime). The cost to replace is $2.4M. Which risk treatment option is MOST appropriate?",
+    "options": [
+      "Accept the risk — document it formally and monitor; the cost of replacement exceeds the annual loss expectancy",
+      "Transfer the risk by purchasing cyber insurance specifically covering HVAC system failures and data center outages",
+      "Mitigate the risk through compensating controls: network isolation, enhanced monitoring, manual override procedures, and accelerated replacement planning",
+      "Avoid the risk by immediately shutting down the legacy HVAC system and using portable cooling units temporarily"
+    ],
+    "answer": 2,
+    "explanation": "For High Likelihood × Critical Impact risk, acceptance is not appropriate governance. Transfer (insurance) alone doesn't reduce the actual risk of outage. Avoidance (shutdown) would cause the very harm you're trying to prevent. The correct approach is mitigation through compensating controls: isolate the system, monitor closely, create manual procedures, and plan replacement — reducing risk while maintaining operations.",
+    "weakness": "Risk treatment strategies, compensating controls",
+    "references": ["https://www.nist.gov/pubs/sp/800/30/r1/final", "https://www.isaca.org/resources/isaca-journal/issues/2016/volume-3/risk-treatment"]
+  },
+  {
+    "id": 1005,
+    "domain": 1,
+    "text": "A healthcare organization's Board of Directors asks the CISO to present on organizational security governance. The board wants to understand their personal liability. Which statement BEST captures board-level security governance responsibility under US law?",
+    "options": [
+      "Board members have no personal liability for cybersecurity incidents since they delegate operational responsibility to the C-suite",
+      "Under the Business Judgment Rule, boards are protected from liability as long as they make informed decisions in good faith, including on cybersecurity matters",
+      "HIPAA holds board members personally criminally liable for all data breaches regardless of due diligence",
+      "SEC regulations require board members to have cybersecurity certifications or appoint a board-level CISO"
+    ],
+    "answer": 1,
+    "explanation": "The Business Judgment Rule protects directors who act in good faith, make informed decisions, and act in the organization's best interest. For cybersecurity, courts apply this rule: boards must demonstrate they received regular security briefings, asked informed questions, and ensured adequate resources were allocated. Pure delegation without oversight can remove Business Judgment Rule protection.",
+    "weakness": "Corporate governance, legal liability",
+    "references": ["https://www.nist.gov/cyberframework"]
+  },
+  {
+    "id": 1006,
+    "domain": 1,
+    "text": "An organization operates in 12 countries and must reconcile conflicting data residency laws (Brazil LGPD, China PIPL, EU GDPR, California CCPA). A customer in Brazil accesses a US-based service, which stores data on EU servers, processed by a contractor in India. Which principle BEST guides determining which law applies?",
+    "options": [
+      "The law of the country where the data servers are physically located always governs data processing activities",
+      "The strictest regulation (GDPR) should govern all processing activities globally to ensure universal compliance",
+      "A conflict of laws analysis applying the principle of territorial jurisdiction, data subject location, and processor establishment — likely requiring compliance with multiple overlapping regulations simultaneously",
+      "The organization's country of incorporation determines which privacy law applies to all global operations"
+    ],
+    "answer": 2,
+    "explanation": "Modern privacy laws apply based on multiple jurisdictional triggers: where data subjects reside, where processing occurs, and where the controller is established. This creates overlapping compliance obligations. LGPD applies to Brazilian residents, GDPR to EU storage/processing, CCPA to California residents, PIPL if China-related data is processed. A comprehensive compliance program must address all simultaneously.",
+    "weakness": "Multi-jurisdictional privacy compliance, conflict of laws",
+    "references": ["https://www.nist.gov/privacy-framework", "https://gdpr.eu/"]
+  },
+  {
+    "id": 1007,
+    "domain": 1,
+    "text": "During a business continuity planning exercise, a tabletop simulation reveals that your Recovery Time Objective (RTO) for a core payment system is 4 hours, but your actual recovery capability (tested) is 11 hours. The business impact analysis shows that every hour of downtime costs $340,000. What is the BEST course of action?",
+    "options": [
+      "Update the BCP to reflect a revised RTO of 11 hours to align documentation with actual capability",
+      "Invest in technical improvements to reduce actual recovery time to meet the 4-hour RTO, prioritizing based on the $340,000/hour business impact",
+      "Accept the gap and implement manual workarounds documented in the BCP to bridge the 7-hour difference",
+      "Increase cyber insurance coverage to compensate for the financial exposure during the additional 7-hour recovery gap"
+    ],
+    "answer": 1,
+    "explanation": "The RTO is set based on business requirements ($340,000/hour of downtime). Simply raising the RTO to match poor capability ignores business needs. The correct answer is to invest in technical capability to meet the business-driven RTO. The 7-hour gap represents up to $2.38M in additional exposure per incident — justifying significant investment in improved recovery capability.",
+    "weakness": "Business continuity planning, RTO/RPO gap analysis",
+    "references": ["https://www.nist.gov/pubs/sp/800/34/r1/final"]
+  },
+  {
+    "id": 1008,
+    "domain": 1,
+    "text": "A CISO at a defense contractor receives a security clearance briefing indicating that a nation-state APT group has been targeting their sector using a specific supply chain attack vector. The organization shares threat intelligence with peers through an ISAC. Which ethical obligation takes precedence when the intelligence suggests a specific named vendor's product is compromised?",
+    "options": [
+      "Share the full intelligence immediately with all ISAC members, as the collective defense benefit outweighs any other consideration",
+      "Withhold the intelligence entirely until the vendor is formally notified and has issued a patch, to avoid panic",
+      "Follow responsible disclosure principles: notify the affected vendor first with a defined timeline, coordinate sharing through the ISAC with appropriate handling designations (TLP), and report to CISA",
+      "Report directly to law enforcement and await their instructions before taking any other action or sharing information"
+    ],
+    "answer": 2,
+    "explanation": "Responsible disclosure in threat intelligence follows the Traffic Light Protocol (TLP) and coordinated vulnerability disclosure principles. First notify the affected vendor, give a reasonable remediation window, then coordinate sharing through the ISAC using TLP markings. CISA/US-CERT should be notified for nation-state threats. This balances collective defense with avoiding premature disclosure that could harm more than help.",
+    "weakness": "Threat intelligence sharing, responsible disclosure, ethics",
+    "references": ["https://www.cisa.gov/topics/cyber-threats-and-advisories/information-sharing", "https://www.first.org/tlp/"]
+  },
+  {
+    "id": 1009,
+    "domain": 1,
+    "text": "A CISO is developing a security awareness training program. Research shows that 70% of employees fail simulated phishing tests, but 85% report they completed mandatory annual security training. What does this gap MOST likely indicate, and what is the BEST remediation?",
+    "options": [
+      "Employees are lying about completing training — implement proctored assessments to verify completion",
+      "Annual training creates a compliance checkbox mentality without behavior change; replace with continuous micro-learning, simulated phishing with immediate coaching, and role-specific training",
+      "The phishing simulations are too advanced; simplify them to match the training content employees received",
+      "The 70% failure rate is acceptable for industry standards; maintain current training and monitor trends"
+    ],
+    "answer": 1,
+    "explanation": "High training completion + high phishing failure rate is a classic compliance-vs-security gap. Annual checkbox training does not produce lasting behavior change. NIST SP 800-50 recommends awareness programs that are role-specific, continuous, and behaviorally focused. Micro-learning, just-in-time training triggered by phishing failures, and positive reinforcement are evidence-based approaches that improve actual security behavior.",
+    "weakness": "Security awareness training effectiveness, human factors",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/50/final", "https://www.sans.org/security-awareness-training/"]
+  },
+  {
+    "id": 1010,
+    "domain": 1,
+    "text": "Your organization's security policy prohibits storing sensitive data on personal devices. You discover that a senior VP has been storing customer PII on their personal iPhone for 'convenience' in client meetings. When confronted, they state their position exempts them from the policy. What is the CORRECT approach?",
+    "options": [
+      "Grant the VP a formal policy exception documented with compensating controls and additional monitoring",
+      "Escalate to the Board's Audit Committee since this is a governance failure that requires executive-level accountability, while initiating a formal policy violation investigation through HR and Legal",
+      "Implement technical controls (MDM) to prevent the behavior going forward without formal disciplinary action to preserve the relationship",
+      "Update the policy to create a 'senior executive' tier with relaxed controls since their work requirements differ from standard employees"
+    ],
+    "answer": 1,
+    "explanation": "Security policies must apply uniformly regardless of seniority — this is a foundational governance principle. A VP claiming exemption is a governance failure requiring board-level visibility. The Audit Committee provides independent oversight. Treating senior executives as exempt undermines the entire security culture and potentially violates regulatory requirements (PII handling under GDPR/CCPA). Policy consistency is non-negotiable.",
+    "weakness": "Security governance, policy enforcement, executive accountability",
+    "references": ["https://www.nist.gov/cyberframework"]
+  },
+  {
+    "id": 1011,
+    "domain": 1,
+    "text": "A company plans to outsource its HR payroll processing to a cloud SaaS provider. The vendor SOC 2 Type II report shows a qualified opinion with exceptions noted in logical access controls and change management. The vendor assures you these have been remediated. How should you proceed?",
+    "options": [
+      "Accept the vendor's assurance and proceed with outsourcing, requiring quarterly security check-ins",
+      "Reject the vendor entirely — a qualified SOC 2 opinion is disqualifying for payroll processing",
+      "Request evidence of remediation (updated controls documentation, penetration test results, bridge letter from auditors), conduct your own due diligence, and include contractual right-to-audit provisions before proceeding",
+      "Require the vendor to obtain a new SOC 2 Type II audit (6-12 months) before any data is transferred"
+    ],
+    "answer": 2,
+    "explanation": "A qualified SOC 2 opinion means auditors found exceptions — not that the vendor is disqualified. The correct approach is due diligence: request a bridge letter from the SOC 2 auditor attesting to remediation, independent evidence of control fixes, and your own security assessment. Third-party risk management requires contractual protections including right-to-audit. Waiting for a full re-audit delays business unnecessarily when remediation evidence can be evaluated now.",
+    "weakness": "Third-party risk management, SOC 2 audit interpretation",
+    "references": ["https://www.aicpa-cima.com/resources/download/soc-2-reporting-on-an-examination-of-controls", "https://www.nist.gov/pubs/sp/800/161/r1/final"]
+  },
+  {
+    "id": 1012,
+    "domain": 1,
+    "text": "A penetration test reveals that a critical production database can be accessed from the corporate guest WiFi network without authentication. The remediation requires 3 weeks. The CTO wants to delay because the system cannot have downtime. As CISO, what is your MOST appropriate immediate action?",
+    "options": [
+      "Document the risk formally and wait for the scheduled remediation window since the CTO has operational authority",
+      "Immediately implement emergency compensating controls (firewall rules blocking guest WiFi to database network, enhanced logging/alerting), escalate to the CISO/CEO as an unacceptable risk requiring executive decision, and document all decisions",
+      "Disable the guest WiFi network entirely until the database access control issue is remediated",
+      "Engage the penetration testing team to exploit the vulnerability in a controlled manner to demonstrate severity to the CTO"
+    ],
+    "answer": 1,
+    "explanation": "A critical database accessible from guest WiFi without authentication is an immediate, critical risk requiring compensating controls NOW — not in 3 weeks. Emergency controls (firewall rule changes) can be implemented without database downtime. The CTO's operational concerns are valid but do not override security risk management. Escalation to CEO ensures executive awareness and accountability. All decisions must be documented for audit trail.",
+    "weakness": "Incident response, vulnerability management, risk escalation",
+    "references": ["https://www.nist.gov/pubs/sp/800/61/r2/final"]
+  },
+  {
+    "id": 1013,
+    "domain": 1,
+    "text": "An organization is implementing a continuous monitoring program aligned with NIST SP 800-137. The CISO must define monitoring frequencies for different control types. Which approach BEST reflects NIST guidance for continuous monitoring?",
+    "options": [
+      "All security controls should be monitored monthly to ensure consistent security posture across all systems",
+      "Monitoring frequency should be risk-based: volatile/high-impact controls monitored continuously or daily; stable/low-impact controls monitored annually; driven by the organization's defined security metrics",
+      "Continuous monitoring means real-time monitoring of all controls using automated tools — all manual monitoring should be eliminated",
+      "Controls should be monitored quarterly to align with financial reporting cycles and board reporting schedules"
+    ],
+    "answer": 1,
+    "explanation": "NIST SP 800-137 establishes that monitoring frequency should be risk-based and tied to the volatility and impact of each control. High-volatility, high-impact controls (patch status, user accounts, network connections) need frequent automated monitoring. Stable controls (physical security policies, training records) may warrant less frequent review. The goal is meaningful, risk-prioritized information — not monitoring everything at the same frequency.",
+    "weakness": "Continuous monitoring, NIST SP 800-137",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/137/final"]
+  },
+  {
+    "id": 1014,
+    "domain": 1,
+    "text": "Your organization's Disaster Recovery Plan (DRP) has not been tested in two years. A new compliance audit requires evidence of annual testing. The DR coordinator suggests conducting a 'paper walkthrough' review and documenting it as a full test. As CISO, you recognize this creates a compliance documentation problem. What is the MOST appropriate action?",
+    "options": [
+      "Approve the paper walkthrough documentation — it satisfies the compliance requirement and avoids operational disruption",
+      "Conduct a tabletop exercise at minimum, document it accurately as such, and develop a roadmap to achieve full DR test within 6 months with executive sign-off",
+      "Falsify the testing documentation is never acceptable; immediately conduct a full DR failover test regardless of operational impact",
+      "Report the compliance gap to regulators proactively before the audit to demonstrate good faith"
+    ],
+    "answer": 1,
+    "explanation": "Documentation falsification is unethical and potentially illegal. However, a full DR test immediately may not be operationally feasible. The pragmatic and ethical answer is: conduct a real test (tabletop at minimum), document it accurately, and commit to an escalating test program (tabletop → parallel test → full cutover). This satisfies the spirit of compliance while acknowledging the gap and demonstrating remediation commitment.",
+    "weakness": "Business continuity testing, compliance ethics",
+    "references": ["https://www.nist.gov/pubs/sp/800/34/r1/final"]
+  },
+  {
+    "id": 1015,
+    "domain": 1,
+    "text": "A security analyst identifies a critical zero-day vulnerability in a widely-used open-source library that your organization uses in 47 applications. The vendor has no patch. An exploit is being actively sold on dark web forums. What is the CORRECT prioritization framework for response?",
+    "options": [
+      "Patch all 47 applications simultaneously using an emergency change process to eliminate the vulnerability uniformly",
+      "Apply CVSS scoring to rank all 47 applications, then immediately apply compensating controls (WAF rules, network segmentation) for highest-risk applications while developing a systematic patching approach prioritized by business criticality and internet exposure",
+      "Wait for the vendor to release an official patch before taking action to avoid introducing untested code into production",
+      "Hire a threat intelligence firm to monitor dark web forums and only act if a purchase of the exploit is detected"
+    ],
+    "answer": 1,
+    "explanation": "Zero-day with active exploitation requires immediate response. With 47 applications, simultaneous patching is operationally impossible. The correct approach combines: (1) CVSS + business criticality + internet-exposure scoring to prioritize, (2) immediate compensating controls (WAF, network segmentation) for highest-risk systems, (3) systematic patching by priority tier. Waiting for a vendor patch during active exploitation is unacceptable.",
+    "weakness": "Vulnerability management, zero-day response prioritization",
+    "references": ["https://www.first.org/cvss/", "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"]
+  },
+  {
+    "id": 1016,
+    "domain": 1,
+    "text": "The Board of Directors asks the CISO to explain the difference between the organization's Risk Appetite and Risk Tolerance as part of a governance briefing. Which answer BEST captures the distinction relevant to security decision-making?",
+    "options": [
+      "Risk Appetite and Risk Tolerance are synonymous terms used interchangeably in risk management frameworks",
+      "Risk Appetite is the broad strategic amount of risk the organization is willing to accept in pursuit of objectives; Risk Tolerance is the acceptable variation around specific risk objectives — the operational thresholds before escalation is required",
+      "Risk Appetite applies to financial risks; Risk Tolerance applies to operational and cybersecurity risks",
+      "Risk Tolerance is set by the Board; Risk Appetite is set by the CISO based on technical capabilities"
+    ],
+    "answer": 1,
+    "explanation": "Risk Appetite is the strategic, high-level declaration of how much risk the organization will accept (e.g., 'We will not tolerate any regulatory fines'). Risk Tolerance is the operational, measurable threshold around that appetite (e.g., 'Patch critical vulnerabilities within 72 hours; escalate if patch rate falls below 95%'). Both are set by governance, not technical staff alone. This distinction is fundamental to CISSP Domain 1.",
+    "weakness": "Risk appetite vs risk tolerance, governance",
+    "references": ["https://www.isaca.org/resources/isaca-journal/issues/2015/volume-3/risk-appetite-and-risk-tolerance"]
+  },
+  {
+    "id": 1017,
+    "domain": 1,
+    "text": "During a security audit, you discover that a developer has been using production customer data (including PII) in a development environment for testing. No data masking or anonymization was applied. Which statement BEST describes the regulatory and ethical issues?",
+    "options": [
+      "This is an internal policy violation only; no regulatory exposure exists if the development environment is on the same network as production",
+      "This violates GDPR Article 25 (data protection by design), CCPA data minimization principles, and potentially HIPAA minimum necessary standard if health data is involved; it constitutes both a regulatory violation and an ethical failure requiring immediate remediation and potentially breach notification assessment",
+      "The developer should be terminated immediately for misuse of customer data — no further analysis is needed",
+      "As long as the development environment has equivalent security controls to production, using real data is acceptable for testing purposes"
+    ],
+    "answer": 1,
+    "explanation": "Using real PII in development without data masking violates multiple regulatory frameworks: GDPR Article 25 requires data protection by design/default; CCPA requires data minimization; HIPAA requires minimum necessary standard. Equivalent security controls do not substitute for proper data handling. A breach notification assessment is required to determine if this constitutes a reportable breach under applicable regulations.",
+    "weakness": "Privacy by design, data minimization, regulatory compliance",
+    "references": ["https://gdpr.eu/article-25-data-protection-by-design/", "https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/minimum-necessary-requirement/index.html"]
+  },
+  {
+    "id": 1018,
+    "domain": 1,
+    "text": "A company is being acquired. During due diligence, your security team discovers the target company had an unreported data breach 14 months ago affecting 200,000 customers. The target company's CEO claims remediation is complete. As the acquiring company's CISO, what is your PRIMARY concern?",
+    "options": [
+      "Whether the target company's security controls are now adequate post-remediation",
+      "The undisclosed breach creates material legal liabilities including: potential acquisition of regulatory investigation risk, undisclosed violation of breach notification laws, and unknown litigation exposure — requiring M&A legal review, possible price renegotiation, and disclosure requirements",
+      "Whether your company will need to notify customers of the historical breach after acquisition closes",
+      "The technical nature of the breach and whether similar vulnerabilities exist in the target's current systems"
+    ],
+    "answer": 1,
+    "explanation": "An undisclosed breach is a material legal liability in M&A. Most breach notification laws (GDPR, state laws) require notification within specific timeframes — failure creates regulatory exposure. The acquiring company may inherit these liabilities without price adjustment. This requires: M&A legal review for liability structuring, consideration of reps & warranties insurance, potential adjustment of acquisition price or indemnification clauses, and possible disclosure requirements.",
+    "weakness": "M&A security due diligence, breach notification obligations",
+    "references": ["https://www.ftc.gov/business-guidance/blog/2022/05/ftc-requires-drizly-and-ceo-implement-security-program"]
+  },
+  {
+    "id": 1019,
+    "domain": 1,
+    "text": "A CISO implements a new Information Security Management System (ISMS) and wants to measure its effectiveness. Which metrics framework MOST aligns with demonstrating business value while satisfying compliance requirements?",
+    "options": [
+      "Count the number of security incidents blocked by controls each month as the primary board-level metric",
+      "Track only compliance metrics: percentage of controls implemented, audit findings resolved, and training completion rates",
+      "Implement a balanced scorecard approach: compliance metrics (control coverage), operational metrics (MTTD/MTTR, patch velocity), financial metrics (cost per incident, ROI of controls), and strategic metrics (risk reduction trends aligned to business objectives)",
+      "Focus exclusively on technical metrics: vulnerability counts, CVSS scores, and penetration test findings to drive technical improvement"
+    ],
+    "answer": 2,
+    "explanation": "Effective ISMS measurement requires multi-dimensional metrics. Compliance metrics alone show implementation but not effectiveness. Technical metrics alone don't communicate business value. A balanced scorecard approach: (1) compliance — are controls implemented? (2) operational — are controls working? (3) financial — what's the ROI? (4) strategic — is risk trending toward risk appetite? This structure maps security performance to business outcomes boards understand.",
+    "weakness": "Security metrics, ISMS effectiveness measurement",
+    "references": ["https://www.nist.gov/pubs/sp/800/55/r1/final"]
+  },
+  {
+    "id": 1020,
+    "domain": 1,
+    "text": "An employee reports that their manager is pressuring them to bypass security controls to meet a project deadline. The employee fears retaliation if they formally report. As the security team's point of contact, how should you handle this situation?",
+    "options": [
+      "Advise the employee to comply with the manager's request and document it personally in case questions arise later",
+      "Immediately suspend the project pending investigation — security controls cannot be bypassed under any circumstances",
+      "Assure the employee of whistleblower protections, formally document the report, escalate to the Ethics/Compliance hotline and HR with information security, investigate the bypass request, and address the security risk through proper change control if a legitimate exception is warranted",
+      "Confront the manager directly about the policy violation before involving HR to resolve it informally"
+    ],
+    "answer": 2,
+    "explanation": "This scenario involves both a security risk and an ethical/HR issue. Whistleblower protections (including Sarbanes-Oxley Section 806 for public companies) protect employees from retaliation for reporting security violations. The proper process: protect the reporter, formal documentation, Ethics/Compliance escalation, HR involvement, security investigation, and if a legitimate exception exists, process it through proper change control with management approval — not unilateral bypass.",
+    "weakness": "Security ethics, whistleblower protections, exception management",
+    "references": ["https://www.sec.gov/whistleblower"]
+  },
+  {
+    "id": 1021,
+    "domain": 1,
+    "text": "Your organization's BCP requires that critical systems achieve an RPO of 15 minutes. A senior architect proposes using database transaction log shipping to a warm standby as the recovery mechanism. What gap analysis should you perform?",
+    "options": [
+      "Verify that the log shipping interval is configured to 15 minutes or less, and test failover time against RTO requirements",
+      "Log shipping inherently achieves 15-minute RPO — no further analysis is needed if the interval is set to 15 minutes",
+      "Replace log shipping with synchronous replication since only synchronous replication can guarantee RPO of 15 minutes or less in all scenarios",
+      "The RPO of 15 minutes is unrealistic for production databases — renegotiate to 1 hour to align with practical log shipping capabilities"
+    ],
+    "answer": 0,
+    "explanation": "A 15-minute RPO with 15-minute log shipping intervals means you could lose up to 15 minutes of data — which meets the RPO exactly but leaves no margin. Gap analysis must verify: (1) actual log shipping interval ≤ 15 minutes with monitoring, (2) network bandwidth can transfer logs within the interval, (3) failover RTO is tested and acceptable, (4) log shipping failure detection and alerting is in place, (5) the standby is truly 'warm' (logs applied, not queued).",
+    "weakness": "RPO/RTO, disaster recovery technical implementation",
+    "references": ["https://www.nist.gov/pubs/sp/800/34/r1/final"]
+  },
+  {
+    "id": 1022,
+    "domain": 1,
+    "text": "A security program review reveals that the organization spends 78% of its security budget on preventive controls, 15% on detective controls, and 7% on corrective controls. Incident data shows that 65% of security incidents go undetected for more than 30 days. What does this data suggest about the security program balance?",
+    "options": [
+      "The investment allocation is optimal — prevention is always more cost-effective than detection or correction",
+      "The program is overinvested in prevention relative to detection; the 30+ day dwell time indicates detection capability is severely underfunded, creating risk that breaches persist undetected causing far greater damage",
+      "The 30-day detection time is within industry norms — the Mean Time to Detect (MTTD) for most organizations is 3-6 months",
+      "Corrective control investment should be increased first since faster recovery reduces the impact of undetected incidents"
+    ],
+    "answer": 1,
+    "explanation": "A 30+ day undetected incident rate of 65% indicates a serious detection gap. Defense-in-depth requires balanced investment across prevention, detection, and response. Modern security assumes breach (NIST CSF 'Detect' function) — you cannot prevent all incidents, so detecting them quickly is critical. The data strongly suggests rebalancing: increase investment in SIEM, EDR, threat hunting, and detection capabilities. Industry average MTTD is concerning but not a goal.",
+    "weakness": "Defense in depth, security control balance, detection capabilities",
+    "references": ["https://www.nist.gov/cyberframework"]
+  },
+  {
+    "id": 1023,
+    "domain": 1,
+    "text": "A CISO is establishing a security committee. Which governance structure BEST ensures security decisions are integrated into business operations rather than isolated in the IT department?",
+    "options": [
+      "An IT Security Committee chaired by the CIO with members from IT operations, network engineering, and application development",
+      "A cross-functional Information Security Steering Committee chaired by a C-level executive (not the CISO) with business unit leaders, Legal, HR, Finance, and IT as members; CISO serves as technical advisor and committee secretary",
+      "A security advisory board of external experts who review all security decisions and provide recommendations to the CIO",
+      "Embed a security liaison in each business unit who reports to the CISO and attends departmental meetings"
+    ],
+    "answer": 1,
+    "explanation": "Security governance effectiveness requires organizational integration, not IT ownership. A cross-functional steering committee chaired by a non-CISO C-level (CEO, COO, or CFO) signals that security is a business issue, not just an IT issue. Business unit representation ensures security decisions account for operational realities. The CISO as technical advisor maintains appropriate expertise without ownership bias. This structure is aligned with ISO 27001 governance requirements.",
+    "weakness": "Security governance structure, committee design",
+    "references": ["https://www.iso.org/standard/27001"]
+  },
+  {
+    "id": 1024,
+    "domain": 1,
+    "text": "During a risk assessment, the team debates whether a threat is 'relevant.' A risk analyst argues that a nation-state APT targeting financial institutions is not relevant to a small regional credit union. What framework concept should guide this determination?",
+    "options": [
+      "All threat actors documented in national intelligence reports are relevant to all organizations and must be included in risk assessments",
+      "Threat relevance should be determined by evaluating threat actor motivation against the organization's asset value to that actor, capability relative to the organization's controls, and historical targeting of similar organizations — the nation-state threat may be relevant if the credit union holds data of interest",
+      "Threat relevance is solely determined by the threat actor's technical capability — if they can attack, the threat is relevant",
+      "Small organizations are not relevant targets for nation-state APTs and these threats can be excluded from risk assessments by definition"
+    ],
+    "answer": 1,
+    "explanation": "Threat relevance analysis evaluates three factors: (1) Capability — does the threat actor have technical means? (2) Intent/Motivation — does this asset serve their objectives? (3) Opportunity — can they reach this target? For a credit union, a nation-state targeting financial data for intelligence purposes (SWIFT transactions, account holders) is potentially relevant. Supply chain attacks may also make small institutions pathways to larger targets. Context determines relevance.",
+    "weakness": "Threat modeling, threat relevance assessment",
+    "references": ["https://www.nist.gov/pubs/sp/800/30/r1/final"]
+  },
+  {
+    "id": 1025,
+    "domain": 1,
+    "text": "A new CISO joins an organization and discovers the previous CISO had created an informal 'security council' of trusted colleagues that made all security decisions verbally without documentation. Which is the MOST critical risk this informal governance structure creates?",
+    "options": [
+      "Decisions made without documentation are immediately null and void from a legal standpoint",
+      "Verbal decisions lack audit trails, accountability, and defensibility; they create no institutional memory, cannot demonstrate due diligence to auditors or regulators, and expose individuals and the organization to liability when decisions are challenged",
+      "The informal council may have made technically sound decisions — the only issue is transitioning to formal documentation going forward",
+      "Informal governance creates confidentiality risks since verbal discussions may be overhead by unauthorized parties"
+    ],
+    "answer": 1,
+    "explanation": "Governance without documentation creates multiple critical risks: (1) No audit trail for regulatory compliance demonstrating due diligence; (2) No institutional memory — decisions walk out the door when people leave; (3) Inability to defend decision-making process in litigation; (4) No accountability for decisions; (5) Potential personal liability for executives who cannot demonstrate informed decision-making. Documentation is not bureaucracy — it is the evidence that governance occurred.",
+    "weakness": "Security governance documentation, audit trails, accountability",
+    "references": ["https://www.isaca.org/resources/isaca-journal/issues/2020/volume-1/governance-of-enterprise-information-security"]
+  }
+]

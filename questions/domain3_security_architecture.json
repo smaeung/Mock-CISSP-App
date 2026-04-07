@@ -1,0 +1,377 @@
+[
+  {
+    "id": 3001,
+    "domain": 3,
+    "text": "A financial services firm is designing a new payment processing system. The architects propose using a microservices architecture with each service having its own database. Security review must evaluate this design against secure architecture principles. Which security concern is MOST significant with this approach compared to a monolithic design?",
+    "options": [
+      "Microservices create more network traffic, increasing bandwidth costs and reducing performance",
+      "Microservices dramatically expand the attack surface: each service becomes an independent entry point requiring its own authentication, authorization, and encrypted communication; service-to-service communication requires mutual TLS; each database requires separate access controls; distributed tracing becomes critical for security monitoring — the attack surface is multiplicatively larger than a monolith",
+      "Microservices are inherently less secure than monolithic architectures and should not be used for financial systems",
+      "The primary concern is data consistency — distributed databases create synchronization issues that could lead to financial discrepancies"
+    ],
+    "answer": 1,
+    "explanation": "Microservices architecture multiplies security complexity: N services × M communication paths = N×M potential attack vectors. Security requirements: (1) API gateway for external authentication; (2) Service mesh with mTLS for service-to-service encryption; (3) Per-service authorization policies; (4) Distributed secrets management (Vault, AWS Secrets Manager); (5) Centralized security logging across services; (6) Each service independently patchable but also independently vulnerable. The attack surface is larger but so is the potential for defense-in-depth.",
+    "weakness": "Microservices security, attack surface analysis",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/204/final", "https://owasp.org/www-project-microservices-security/"]
+  },
+  {
+    "id": 3002,
+    "domain": 3,
+    "text": "A company is implementing a Zero Trust Architecture (ZTA). The network team proposes keeping the existing flat internal network and 'adding Zero Trust on top' by implementing MFA for all applications. The CISO disagrees. Who is correct and why?",
+    "options": [
+      "The network team is correct — MFA is the core Zero Trust control and sufficient for initial implementation",
+      "The CISO is correct — Zero Trust requires 'never trust, always verify' applied to all network communications, not just application login; a flat internal network implicitly trusts all traffic between systems; true ZTA requires micro-segmentation, identity-based access to every resource, continuous authorization (not just login MFA), device health verification, and elimination of implicit trust zones — MFA alone is insufficient",
+      "Both are partially correct — MFA is the first phase; network changes can follow in subsequent phases",
+      "Zero Trust only applies to external-facing systems; internal network architecture is out of scope"
+    ],
+    "answer": 1,
+    "explanation": "NIST SP 800-207 defines Zero Trust as eliminating implicit trust in any network segment. A flat internal network assumes lateral movement is allowed once inside — the opposite of Zero Trust. True ZTA components: (1) All resources treated as external (no implicit trust); (2) Least privilege access per session, not per login; (3) Continuous monitoring and validation; (4) Micro-segmentation to limit lateral movement; (5) Device posture assessment before each access decision. Application MFA addresses one authentication layer but leaves network-level trust intact.",
+    "weakness": "Zero Trust Architecture, NIST SP 800-207",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/207/final"]
+  },
+  {
+    "id": 3003,
+    "domain": 3,
+    "text": "An organization is evaluating cryptographic algorithms for a system that will process data for the next 15 years. The data classification requires protection beyond 2040. A developer proposes RSA-2048 for key exchange. What is the MOST critical concern with this choice?",
+    "options": [
+      "RSA-2048 is computationally expensive — use RSA-1024 for better performance over 15 years",
+      "NIST guidance indicates RSA-2048 provides approximately 112 bits of security, currently acceptable but with planned deprecation by 2030; for protection through 2040, cryptographic agility and post-quantum considerations apply — consider RSA-3072+/4096 for near-term or begin evaluating NIST-approved post-quantum cryptography (ML-KEM/Kyber, ML-DSA/Dilithium) for long-term protection against quantum computing threats",
+      "RSA-2048 has known backdoors installed by intelligence agencies — use elliptic curve cryptography instead",
+      "RSA is fine for 15 years — quantum computing is theoretical and won't affect RSA within that timeframe"
+    ],
+    "answer": 1,
+    "explanation": "NIST SP 800-131A Rev 2 deprecates RSA-2048 for key establishment after 2030. The 'harvest now, decrypt later' quantum threat means data encrypted today with quantum-vulnerable algorithms could be decrypted when quantum computers mature. For 15-year protection requirements: (1) RSA-3072 extends security to ~128-bit equivalent; (2) NIST finalized post-quantum standards in 2024 (FIPS 203 ML-KEM, FIPS 204 ML-DSA); (3) Cryptographic agility — design systems to swap algorithms without full redesign.",
+    "weakness": "Post-quantum cryptography, algorithm selection, NIST PQC",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/131/a/r2/final", "https://csrc.nist.gov/projects/post-quantum-cryptography"]
+  },
+  {
+    "id": 3004,
+    "domain": 3,
+    "text": "A security architect is designing the authentication system for a national healthcare exchange handling millions of patient records. The system must balance high assurance authentication with accessibility for patients with disabilities and limited technical literacy. Which solution BEST addresses this scenario?",
+    "options": [
+      "Implement username/password with CAPTCHA — it is universally accessible and provides sufficient security for healthcare",
+      "Deploy FIDO2/WebAuthn with hardware security keys as the primary authentication method for all users",
+      "Implement a tiered authentication system: NIST AAL2 (MFA with phishing-resistant mechanisms like FIDO2 or PIV) for standard access with SMS OTP as a documented exception for users who cannot use FIDO2; clear enrollment processes with identity proofing; accessible MFA options including voice calls for those who cannot use SMS; and a supervised exception process for special circumstances",
+      "Use behavioral biometrics as the sole authentication factor — it is transparent to users and accessible for all disability types"
+    ],
+    "answer": 2,
+    "explanation": "Healthcare systems require HIPAA-compliant authentication (NIST AAL2 at minimum for PHI access). NIST SP 800-63B AAL2 requires MFA. Accessibility is a legal requirement (Section 508, ADA). No single authentication method works universally. A tiered system: (1) Primary: phishing-resistant MFA (FIDO2); (2) Accessible alternatives with documented security trade-offs; (3) Exception processes for edge cases; (4) Identity proofing aligned with NIST SP 800-63A. Behavioral biometrics alone does not meet NIST AAL2 requirements.",
+    "weakness": "Authentication assurance levels, NIST SP 800-63, accessibility",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final"]
+  },
+  {
+    "id": 3005,
+    "domain": 3,
+    "text": "During a security architecture review, a system is found to store passwords using MD5 hashing. The development team argues 'they're still hashed — nobody can see the actual passwords.' What is the technical and security argument against this claim?",
+    "options": [
+      "The development team is correct — hashed passwords cannot be reversed regardless of the hashing algorithm",
+      "MD5 is a broken cryptographic hash for password storage: it is computationally fast (enabling GPU-accelerated cracking at billions of hashes/second), has known collision vulnerabilities, and lacks salting support making it vulnerable to rainbow table attacks; modern password hashing requires purpose-built algorithms (bcrypt, scrypt, Argon2) with work factors that make brute force computationally expensive — a 6-character MD5 password can be cracked in seconds",
+      "Replace MD5 with SHA-256 — the longer hash length prevents brute force attacks",
+      "MD5 is acceptable if a 32-character random salt is appended before hashing — this prevents rainbow table attacks"
+    ],
+    "answer": 1,
+    "explanation": "MD5 and SHA family are cryptographic hash functions designed for speed — the opposite of what password storage needs. A modern GPU can compute 50+ billion MD5 hashes per second, enabling full password space enumeration for common lengths. Argon2 (winner of Password Hashing Competition) is explicitly designed to be memory-hard and computationally expensive, with tunable work factors. SHA-256 is equally fast to compute and similarly inappropriate. NIST SP 800-63B explicitly recommends salted, iterated hashing functions for passwords.",
+    "weakness": "Password storage, cryptographic hash functions, Argon2/bcrypt",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final", "https://owasp.org/www-project-cheat-sheets/cheatsheets/Password_Storage_Cheat_Sheet.html"]
+  },
+  {
+    "id": 3006,
+    "domain": 3,
+    "text": "A cloud architect proposes a design where production and development environments share the same AWS account, separated only by VPC and tag-based access controls. A security reviewer raises concerns. Which specific risk does this architecture create?",
+    "options": [
+      "The architecture is acceptable — VPC provides sufficient network isolation between production and development",
+      "Shared account creates privilege escalation paths: an IAM misconfiguration, overly-permissive role assumption, or compromised development credentials could provide a lateral movement path to production resources; AWS Organizations with separate accounts provides true blast radius containment — account boundaries are stronger isolation boundaries than VPC boundaries within a single account",
+      "The primary concern is cost allocation — tagging is unreliable for chargeback purposes across environments",
+      "Development environments in AWS always require separate regions from production, not separate accounts"
+    ],
+    "answer": 1,
+    "explanation": "AWS account boundaries provide the strongest isolation unit in AWS. Within a single account: (1) IAM roles can be assumed across VPCs; (2) Resource policies can grant cross-VPC access; (3) Service limits are shared; (4) A compromised account root has access to all VPCs; (5) CloudTrail logs intermix. AWS Organizations with separate accounts for prod/dev/test is the AWS Well-Architected recommended approach — a developer's compromised credentials in the dev account cannot access production in a different account without explicit cross-account role trust.",
+    "weakness": "AWS account isolation, cloud security architecture",
+    "references": ["https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/welcome.html"]
+  },
+  {
+    "id": 3007,
+    "domain": 3,
+    "text": "An organization's network uses a traditional perimeter firewall model with a DMZ. A security audit reveals that 90% of recent security incidents involved malware that entered via email, traversed the internal network laterally, and exfiltrated data outbound through allowed HTTP/HTTPS ports. Which architectural change would MOST effectively address this specific attack pattern?",
+    "options": [
+      "Upgrade to a next-generation firewall (NGFW) at the perimeter — application-aware rules will block the outbound exfiltration",
+      "Implement network micro-segmentation to contain lateral movement combined with encrypted traffic inspection (SSL/TLS interception) to detect malware C2 and exfiltration in encrypted channels — addressing both the lateral movement and outbound exfiltration attack phases",
+      "Deploy an email security gateway to prevent malware from entering via email — addressing the initial attack vector eliminates the subsequent lateral movement",
+      "Implement endpoint detection and response (EDR) on all endpoints — endpoint visibility will detect and contain the lateral movement before exfiltration occurs"
+    ],
+    "answer": 1,
+    "explanation": "The attack chain has three phases: email delivery → lateral movement → exfiltration. Single-control solutions address only one phase. Micro-segmentation (limiting lateral movement to only necessary system communications) directly addresses the lateral movement phase. SSL/TLS inspection addresses the exfiltration phase by making encrypted traffic visible to security tools. These two controls together address the primary failure modes. Email security and EDR are also valuable as complementary layers but the question asks for the MOST effective single architectural change.",
+    "weakness": "Network security architecture, lateral movement prevention, micro-segmentation",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/207/final"]
+  },
+  {
+    "id": 3008,
+    "domain": 3,
+    "text": "A software development team is building a new web application that will handle financial transactions. The lead developer wants to implement their own custom encryption algorithm, claiming 'our proprietary algorithm is more secure because attackers don't know it.' How should the security architect respond?",
+    "options": [
+      "Approve the custom algorithm if the developer can demonstrate it passes entropy tests and resists basic cryptanalysis",
+      "Reject the custom algorithm: Kerckhoffs's Principle states that a cryptosystem should be secure even if everything about the system, except the key, is public knowledge — security through obscurity is not a valid security control; custom cryptographic algorithms have not undergone peer review and are extremely likely to contain subtle implementation flaws; use standardized, publicly vetted algorithms (AES-256, RSA-3072, ECDSA P-384)",
+      "Allow the custom algorithm for non-sensitive transaction metadata while using standard algorithms for the financial data",
+      "Require the developer to submit the algorithm to a third-party cryptographer for review before approving its use"
+    ],
+    "answer": 1,
+    "explanation": "Kerckhoffs's Principle (1883) remains foundational: a cryptosystem's security must rely on key secrecy, not algorithm secrecy. Custom algorithms fail for several reasons: (1) No public peer review — cryptographic flaws are subtle and require expert analysis over years; (2) Security through obscurity is not recognized as a security control by NIST or any regulatory framework; (3) Implementation bugs in cryptography are common even for experts; (4) Regulatory frameworks (FIPS 140-3, PCI DSS) require NIST-approved algorithms. Even a third-party review is insufficient — algorithms require years of public scrutiny.",
+    "weakness": "Cryptographic principles, Kerckhoffs's principle, custom cryptography",
+    "references": ["https://csrc.nist.gov/projects/cryptographic-standards-and-guidelines"]
+  },
+  {
+    "id": 3009,
+    "domain": 3,
+    "text": "A SCADA system controls water treatment for a city of 500,000 people. During a security assessment, you discover the SCADA network is connected to the corporate IT network through a single firewall, HMI workstations run Windows XP (end-of-life), and remote access is provided via RDP exposed to the internet. Rank the risks by severity for immediate prioritization.",
+    "options": [
+      "Windows XP (highest), RDP exposure (medium), IT/OT network connection (lowest)",
+      "RDP internet exposure (highest — direct attack path to operational systems with known critical vulnerabilities); IT/OT flat network connection (high — enables lateral movement from IT to OT); Windows XP end-of-life (high — years of unpatched critical vulnerabilities on HMI systems that control physical processes); all three require emergency remediation, but exposed RDP is the immediate 'fire' while the others are structural",
+      "IT/OT network connection (highest), Windows XP (medium), RDP exposure (lowest)",
+      "All three risks are equally critical and cannot be ranked without additional technical analysis"
+    ],
+    "answer": 1,
+    "explanation": "For water treatment SCADA, consequences of compromise include physical harm to 500,000 people. Risk ranking: (1) Internet-exposed RDP = immediate, externally accessible attack vector with proven exploit code (BlueKeep, DejaBlue); attackers can directly reach operational systems today. (2) Flat IT/OT network = enables lateral movement from any IT compromise into OT, dramatically expanding attack paths. (3) Windows XP = unpatched critical CVEs, but requires network reachability first. Emergency action: block RDP immediately, implement OT network segmentation, and begin HMI OS migration planning.",
+    "weakness": "ICS/SCADA security, OT risk prioritization, critical infrastructure",
+    "references": ["https://www.cisa.gov/topics/industrial-control-systems", "https://www.nist.gov/pubs/sp/800/82/r3/final"]
+  },
+  {
+    "id": 3010,
+    "domain": 3,
+    "text": "An organization deploys a hardware security module (HSM) for cryptographic key management. The HSM is configured with a 3-of-5 multi-party key ceremony requiring senior executives to activate. Six months later, two of the five key custodians have left the organization. What is the risk, and what is the appropriate response?",
+    "options": [
+      "The 3-of-5 quorum can still be met with the remaining 3 custodians — no action needed",
+      "The departure of two custodians reduces recovery margin to a single-point-of-failure: if one more custodian becomes unavailable, the HSM cannot be recovered; immediately conduct a new key ceremony to re-establish the 3-of-5 quorum with new custodians, replacing departed members — delay creates existential risk to encrypted systems",
+      "Replace the HSM entirely since the original key ceremony's integrity cannot be guaranteed after custodian turnover",
+      "Store the HSM activation credentials in a password vault accessible to the IT team to eliminate single-point-of-failure dependency"
+    ],
+    "answer": 1,
+    "explanation": "An HSM with 3-of-5 quorum and 3 remaining custodians has zero margin: any single additional loss of availability (vacation, illness, resignation, death) prevents HSM access and potentially locks the organization out of all protected encrypted data. M-of-N schemes require rebuilding the quorum when membership falls below a comfortable margin above M. Storing credentials in a vault defeats the entire purpose of multi-party control. The appropriate response is a formal re-keying ceremony adding new custodians to restore comfortable margin.",
+    "weakness": "HSM key management, multi-party control, M-of-N key ceremony",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/57/pt2/r1/final"]
+  },
+  {
+    "id": 3011,
+    "domain": 3,
+    "text": "A company is evaluating a third-party security product that claims FIPS 140-3 Level 3 validation. What does this validation specifically guarantee, and what does it NOT guarantee?",
+    "options": [
+      "FIPS 140-3 Level 3 guarantees the product has no security vulnerabilities and is approved for use with all classified data",
+      "FIPS 140-3 Level 3 validates that the cryptographic module meets specific physical security requirements (tamper-evident, tamper-resistance, identity-based authentication) and the implementation of approved algorithms — it does NOT validate the security of the overall product, application logic, integration security, or that the product is free of vulnerabilities outside the cryptographic module itself",
+      "FIPS 140-3 Level 3 certification means the product can be used to process Top Secret/SCI data without additional controls",
+      "FIPS 140-3 Level 3 certification covers the entire software product including all application logic and interfaces"
+    ],
+    "answer": 1,
+    "explanation": "FIPS 140-3 validates cryptographic modules specifically — not entire products. Level 3 adds physical tamper resistance and identity-based authentication for crypto operations. It does NOT validate: the application's business logic, input validation, authentication outside the module, network security, or overall product security posture. A FIPS 140-3 validated HSM in an application with SQL injection vulnerabilities is not a 'secure product.' The validation scope is narrow and must be understood in context.",
+    "weakness": "FIPS 140-3 validation, cryptographic module certification scope",
+    "references": ["https://csrc.nist.gov/projects/cryptographic-module-validation-program"]
+  },
+  {
+    "id": 3012,
+    "domain": 3,
+    "text": "A security architect is designing a system to verify software integrity for a critical infrastructure control system. Updates will be distributed digitally. Which cryptographic mechanism provides the STRONGEST assurance that software has not been tampered with?",
+    "options": [
+      "SHA-256 hash of the software package published on the vendor's website for users to verify",
+      "Code signing using a certificate issued by a trusted Certificate Authority, with the signing key stored in an HSM, combined with a supply chain transparency log (e.g., Sigstore) allowing independent verification of the signing event — this provides tamper detection and authenticates the software's origin",
+      "MD5 hash embedded in the software itself that users can compare after download",
+      "Encryption of the software package using the vendor's public key — only the vendor's private key can create the encrypted package"
+    ],
+    "answer": 1,
+    "explanation": "Software integrity assurance for critical infrastructure requires: (1) Digital signature (not just a hash) — proves both integrity AND origin; (2) HSM-stored signing key — protects against signing key compromise; (3) CA-issued certificate — provides trusted chain of identity; (4) Transparency logs (Sigstore/TUF) — enables detection of unauthorized signing events. A SHA-256 hash from the vendor's website fails if the vendor's website is compromised. MD5 has collision vulnerabilities. Encryption with a public key doesn't prove authenticity — anyone can encrypt with a public key.",
+    "weakness": "Code signing, software supply chain security, digital signatures",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/161/r1/final", "https://www.sigstore.dev/"]
+  },
+  {
+    "id": 3013,
+    "domain": 3,
+    "text": "A Trusted Platform Module (TPM) is used in a laptop fleet to implement Measured Boot. During a security review, an engineer claims 'TPM prevents malware from running on the laptop.' This claim requires correction. What does TPM Measured Boot actually provide?",
+    "options": [
+      "The engineer is correct — TPM with Secure Boot prevents all unauthorized code from executing",
+      "TPM Measured Boot records cryptographic measurements of the boot sequence into Platform Configuration Registers (PCRs) and can refuse to unseal disk encryption keys if measurements deviate from known-good values — it detects bootkit/rootkit modification at boot time; it does NOT prevent malware from running post-boot; it provides attestation of boot integrity, not runtime execution control",
+      "TPM prevents malware only during the boot process — runtime protection requires additional endpoint security",
+      "TPM Measured Boot encrypts all system files, preventing malware from modifying them"
+    ],
+    "answer": 1,
+    "explanation": "TPM Measured Boot: (1) Measures each boot component (UEFI, bootloader, kernel) into PCR registers; (2) PCR values are sealed to disk encryption keys — if boot chain is modified, PCRs change, keys don't unseal, disk stays encrypted; (3) Remote attestation: a server can verify the device's PCR values before granting access. What it does NOT do: prevent post-boot malware execution, stop applications from being compromised, or control what software runs after the OS loads. TPM is a hardware root of trust for boot integrity, not a runtime execution control.",
+    "weakness": "Trusted Platform Module, Measured Boot, PCR registers",
+    "references": ["https://trustedcomputinggroup.org/resource/tpm-library-specification/"]
+  },
+  {
+    "id": 3014,
+    "domain": 3,
+    "text": "An organization uses an IPsec VPN for remote access. Security team review shows the VPN is configured in transport mode between client endpoints and a VPN concentrator in the DMZ. What security gap does this create for traffic from the VPN concentrator to internal systems?",
+    "options": [
+      "No gap — IPsec transport mode provides end-to-end encryption for the entire communication path",
+      "IPsec transport mode encrypts traffic only between the client and the VPN concentrator; traffic from the VPN concentrator to internal systems travels unencrypted on the internal network — if this segment contains sensitive data, it requires additional protection (tunnel mode to internal servers, network encryption, or TLS at the application layer)",
+      "Transport mode is more secure than tunnel mode — this configuration is optimal",
+      "The gap is a performance issue only — all IPsec modes provide equivalent security"
+    ],
+    "answer": 1,
+    "explanation": "IPsec modes: Transport mode encrypts the payload between two endpoints. Tunnel mode encapsulates the entire packet, creating an encrypted tunnel between gateway devices. In this configuration: Client → [IPsec transport] → VPN Concentrator → [Unencrypted?] → Internal Server. The segment after the VPN concentrator is the gap. If the internal network is trusted and segmented, this may be acceptable with compensating controls. For zero-trust architectures, end-to-end encryption to the application server is preferred.",
+    "weakness": "IPsec modes, VPN architecture, transport vs tunnel mode",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/77/r1/final"]
+  },
+  {
+    "id": 3015,
+    "domain": 3,
+    "text": "A development team implements OAuth 2.0 for API authentication. A security review finds they store client_secrets in the mobile app's binary. A security engineer argues this is acceptable because the secrets are 'compiled in' and 'hard to find.' What is the correct assessment?",
+    "options": [
+      "Compiled secrets are sufficiently protected — reverse engineering mobile applications requires significant expertise",
+      "Client secrets in mobile app binaries are NOT confidential: mobile apps can be reverse engineered using readily available tools (jadx, frida, strings); app stores distribute the binary to all users including attackers; this violates OAuth 2.0 RFC 6749 which classifies mobile apps as 'public clients' that cannot maintain secret confidentiality; the correct approach is PKCE (Proof Key for Code Exchange) for public clients — no client_secret required",
+      "The client_secret should be obfuscated using base64 encoding before compilation — this provides adequate protection",
+      "Use certificate pinning to protect the client_secret during transmission — this prevents interception"
+    ],
+    "answer": 1,
+    "explanation": "OAuth 2.0 RFC 6749 explicitly distinguishes confidential clients (server-side, can maintain secrets) from public clients (mobile/desktop apps, cannot maintain secrets). Mobile app binaries are distributed to all users and can be reverse engineered. Tools like jadx, frida, and strings can extract hardcoded values in minutes. The RFC-compliant solution for mobile apps is PKCE (RFC 7636): a dynamic code verifier/challenge pair generated per session, cryptographically linking the authorization request to the token exchange without storing a static secret.",
+    "weakness": "OAuth 2.0, public vs confidential clients, PKCE, mobile security",
+    "references": ["https://www.rfc-editor.org/rfc/rfc6749", "https://www.rfc-editor.org/rfc/rfc7636", "https://owasp.org/www-project-mobile-security-testing-guide/"]
+  },
+  {
+    "id": 3016,
+    "domain": 3,
+    "text": "An enterprise architect is designing a system where a user's biometric data (fingerprint template) is used for authentication. The architect proposes storing the biometric template on the central authentication server. A security reviewer suggests storing templates on the user's smart card instead. What is the PRIMARY security advantage of on-card template storage?",
+    "options": [
+      "Smart card storage is faster for authentication because there is no network round-trip for template retrieval",
+      "On-card storage implements a 'match-on-card' architecture where the biometric template never leaves the card and the matching computation occurs in the card's secure element — a central server breach cannot expose biometric templates (which unlike passwords, cannot be changed if compromised), and the biometric system cannot be used for population-scale surveillance since templates are decentralized",
+      "Smart card storage is cheaper because it eliminates the need for a central biometric database server",
+      "On-card storage prevents biometric replay attacks by ensuring the template is only accessible to the card holder"
+    ],
+    "answer": 1,
+    "explanation": "Biometric data is fundamentally different from passwords — you cannot change your fingerprints. Central storage creates: (1) Catastrophic breach risk — one breach exposes millions of permanently compromised biometric identities; (2) Surveillance capability — central templates enable large-scale matching against surveillance data; (3) Mission creep — centralized biometrics can be repurposed beyond original use. Match-on-card: template stays in the card's secure element, comparison happens on-card, only match/no-match result is shared. The central server never receives or stores the template.",
+    "weakness": "Biometric security, match-on-card, decentralized biometric storage",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/76/3/final"]
+  },
+  {
+    "id": 3017,
+    "domain": 3,
+    "text": "A cloud architect is designing a multi-tenant SaaS application. Each tenant must have complete data isolation — one tenant must never access another's data. The developer proposes row-level security in a shared database, where each row has a tenant_id column and application code filters by tenant. What is the security concern with this approach?",
+    "options": [
+      "Row-level security in a shared database is the industry-standard approach for multi-tenancy — no security concern exists",
+      "Application-layer tenant isolation is vulnerable to tenant isolation bypass: SQL injection, application logic bugs, or ORM misconfiguration could bypass the tenant_id filter; defense-in-depth requires database-level enforcement (PostgreSQL Row Level Security policies enforced by the database engine, not application code) plus separate encryption keys per tenant, and strong tenant identifier validation to prevent cross-tenant data access",
+      "The primary concern is performance — shared databases with row-level filtering are too slow for production use",
+      "The approach is acceptable for medium-sensitivity data but should use separate databases for highly sensitive tenants"
+    ],
+    "answer": 1,
+    "explanation": "Application-layer isolation (WHERE tenant_id = :current_tenant) is a single point of failure for multi-tenant isolation. A single SQL injection, authorization bypass, or missing filter in one query path can expose all tenant data. Database-enforced Row Level Security (implemented in the database engine itself, not the application) prevents queries from returning rows that don't match the active tenant policy even if the application forgets to filter. Defense-in-depth adds: separate encryption keys per tenant, tenant ID verification at the API gateway, and dedicated database schemas for highest-risk scenarios.",
+    "weakness": "Multi-tenant security, row-level security, SQL injection in SaaS",
+    "references": ["https://owasp.org/www-project-top-ten/"]
+  },
+  {
+    "id": 3018,
+    "domain": 3,
+    "text": "A security review of a web application identifies that user session tokens are 8-byte random values (64 bits of randomness) generated by the application's custom random function that uses the current timestamp as a seed. What vulnerabilities does this create?",
+    "options": [
+      "64-bit session tokens are sufficient — the token space of 2^64 is too large to enumerate",
+      "This design has two critical flaws: (1) Timestamp-seeded PRNG is predictable — an attacker who knows approximate session creation time can enumerate candidate tokens and hijack sessions; (2) Custom random functions typically produce poor entropy; NIST recommends 128+ bits of session token entropy from a cryptographically secure PRNG (CSPRNG); use language/OS CSPRNG (os.urandom(), Java SecureRandom, etc.) and never seed with predictable values",
+      "The vulnerability is purely theoretical — session token guessing attacks are not practical against real systems",
+      "Increase the token to 16 bytes — 128 bits from the same timestamp-seeded function will be secure"
+    ],
+    "answer": 1,
+    "explanation": "Two distinct vulnerabilities: (1) Predictable seed: timestamp-seeded PRNG means an attacker who knows the approximate time a session was created can generate all possible seeds for that time window and enumerate the small set of possible tokens. This reduces the effective entropy from 64 bits to the entropy of the timestamp (seconds/milliseconds in a time window). (2) Insufficient entropy: even if the PRNG were secure, 64 bits is below OWASP's minimum recommendation of 128 bits for session tokens. The fix is using the OS CSPRNG with no seed configuration.",
+    "weakness": "Session token entropy, PRNG, CSPRNG requirements",
+    "references": ["https://owasp.org/www-project-cheat-sheets/cheatsheets/Session_Management_Cheat_Sheet.html", "https://csrc.nist.gov/pubs/sp/800/90/a/r1/final"]
+  },
+  {
+    "id": 3019,
+    "domain": 3,
+    "text": "An organization is implementing database encryption for a healthcare application containing PHI. The DBA proposes Transparent Data Encryption (TDE) at the storage layer. The security architect argues this does not meet HIPAA encryption requirements for the use case. Who is correct?",
+    "options": [
+      "The DBA is correct — TDE provides AES-256 encryption at rest, which meets HIPAA requirements",
+      "The architect may be correct depending on the threat model: TDE protects against physical media theft (stolen drives, cloud provider access) but does NOT protect data from privileged database administrators who access data through normal database connections; if the threat model includes insider threats or compromised database credentials, application-level or column-level encryption with separate key management is required in addition to TDE",
+      "HIPAA does not specify encryption requirements — any encryption method selected by the organization is sufficient",
+      "TDE should be replaced with filesystem-level encryption (dm-crypt, BitLocker) which provides equivalent protection at a lower performance cost"
+    ],
+    "answer": 1,
+    "explanation": "TDE (Transparent Data Encryption) encrypts data files on disk. The database engine decrypts data transparently for any authenticated database user. This means: (1) A DBA with database credentials sees plaintext data; (2) A compromised application account sees plaintext data; (3) TDE only protects against the physical media theft threat. For PHI, if insider threat or compromised privileged accounts are in scope, field-level or application-level encryption with separate key management (keys not accessible to DBAs) is required for true data protection.",
+    "weakness": "Transparent Data Encryption, HIPAA encryption, insider threat model",
+    "references": ["https://www.hhs.gov/hipaa/for-professionals/security/guidance/index.html"]
+  },
+  {
+    "id": 3020,
+    "domain": 3,
+    "text": "A security architect is designing a system for sharing threat intelligence between government agencies with different security domains (Unclassified, Secret, Top Secret). Data from higher classification levels must never flow to lower classification systems. Which security architecture model BEST addresses this requirement?",
+    "options": [
+      "Implement strong access controls on a single shared system to enforce classification boundaries",
+      "Deploy a Multi-Level Security (MLS) architecture using a Reference Monitor enforcing the Bell-LaPadula model: No Read Up (NRU) prevents users from reading data above their clearance; No Write Down (NWD) prevents users from writing data to systems at lower classification — combined with mandatory access controls that cannot be overridden by discretionary decisions, this enforces information flow from lower to higher classification levels only",
+      "Use data diodes between classification levels to provide one-directional data flow with no possibility of reverse flow",
+      "Create separate systems for each classification level with no electronic connections between them"
+    ],
+    "answer": 1,
+    "explanation": "The Bell-LaPadula model was specifically designed for military multi-level security: (1) Simple Security Property (No Read Up): subjects cannot read objects at higher classification; (2) *-Property (No Write Down): subjects cannot write to objects at lower classification — this prevents information leakage from Top Secret to Unclassified even by authorized users. Data diodes address one aspect (physical one-way flow) but Bell-LaPadula with MAC provides the complete formal model. Separate systems with no connections satisfy confidentiality but prevent information sharing across levels.",
+    "weakness": "Bell-LaPadula model, Multi-Level Security, mandatory access controls",
+    "references": ["https://csrc.nist.gov/glossary/term/bell_lapadula_model"]
+  },
+  {
+    "id": 3021,
+    "domain": 3,
+    "text": "A cloud migration project moves a critical application to AWS. The security team discovers the application connects to an RDS database using hardcoded credentials stored in the application's environment variables accessible via the EC2 instance metadata service. What is the recommended architecture change?",
+    "options": [
+      "Rotate the database credentials monthly and update the environment variables — this limits exposure from potential credential leaks",
+      "Replace hardcoded credentials with IAM role-based authentication: assign an IAM role to the EC2 instance with RDS IAM authentication enabled; the application requests temporary credentials from the instance metadata service via the IAM role, which auto-rotate every 15 minutes — eliminating static credentials entirely",
+      "Move the credentials from environment variables to AWS Systems Manager Parameter Store with standard security — this provides centralized credential management",
+      "Encrypt the credentials using KMS before storing in environment variables — encrypted credentials in environment variables are secure"
+    ],
+    "answer": 1,
+    "explanation": "Static database credentials in environment variables have multiple failure modes: exposed in process listings, logs, crash dumps, and configuration exports. IAM role-based authentication eliminates static credentials entirely: (1) EC2 instance assumes an IAM role; (2) IAM role has RDS IAM auth permission; (3) Application requests a short-lived auth token (15-minute TTL) instead of a password; (4) Token auto-rotates — no credential to steal. AWS Secrets Manager (not just Parameter Store) with auto-rotation is also acceptable, but IAM auth is the zero-credential architecture.",
+    "weakness": "AWS IAM roles, RDS IAM authentication, credential management",
+    "references": ["https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html"]
+  },
+  {
+    "id": 3022,
+    "domain": 3,
+    "text": "A penetration test against a web application reveals that the application reflects user input in HTTP response headers without sanitization. For example, a user can set a cookie named 'X-Custom-Header: injected-value\\r\\nX-Injected: malicious'. What vulnerability class does this represent and what is the primary risk?",
+    "options": [
+      "Cross-Site Scripting (XSS) — the injected value can execute JavaScript in the user's browser",
+      "HTTP Response Splitting (CRLF Injection) — injecting carriage return (\\r) and line feed (\\n) characters into HTTP response headers allows an attacker to inject arbitrary HTTP headers and response body, enabling cache poisoning, cross-site scripting via injected content-type headers, or session fixation through injected Set-Cookie headers",
+      "SQL Injection — the header value is passed to database queries where it can manipulate query logic",
+      "Directory Traversal — the injected header allows access to files outside the web root"
+    ],
+    "answer": 1,
+    "explanation": "HTTP Response Splitting (CRLF Injection): HTTP headers are terminated by \\r\\n (CRLF). Injecting these characters allows splitting a single response into two, where the attacker controls the second response entirely. Impacts: (1) Cache poisoning — attackers poison caches to serve malicious content to all users; (2) XSS via injected Content-Type or scripted headers; (3) Session fixation via Set-Cookie injection; (4) Header injection for web application firewall bypass. Fix: strip or URL-encode \\r\\n from all user input used in response headers.",
+    "weakness": "HTTP Response Splitting, CRLF injection, header injection",
+    "references": ["https://owasp.org/www-community/attacks/HTTP_Response_Splitting"]
+  },
+  {
+    "id": 3023,
+    "domain": 3,
+    "text": "An organization is evaluating Secure Boot implementation for their server fleet. A security engineer argues that Secure Boot provides 'complete protection against rootkits and bootkits.' What is the accurate assessment of Secure Boot's capabilities and limitations?",
+    "options": [
+      "The engineer is correct — Secure Boot with a properly configured allowlist prevents all rootkits",
+      "Secure Boot verifies the cryptographic signature of bootloader and OS kernel against a database of trusted keys in UEFI firmware — it prevents unsigned or improperly signed code from executing during boot; it does NOT protect against: signed malicious code (if code signing keys are compromised), runtime rootkits loaded after the verified boot chain, physical attacks on the UEFI firmware itself, or disabling Secure Boot if the BIOS password is not set",
+      "Secure Boot only works on Windows systems — Linux and other OS require TPM instead",
+      "Secure Boot provides complete bootkit protection when combined with antivirus software"
+    ],
+    "answer": 1,
+    "explanation": "Secure Boot verifies that boot-phase code is signed by a trusted key stored in UEFI firmware. Limitations: (1) Trusted but malicious code — if a signing key is compromised, malicious code can be signed; (2) Post-boot rootkits — once the OS loads, Secure Boot has no further role; (3) Physical attacks — an attacker with physical access can clear Secure Boot keys or disable it via BIOS without password; (4) UEFI vulnerabilities can bypass Secure Boot below its measurement layer. Secure Boot is valuable but requires TPM, BIOS password, and runtime security in combination.",
+    "weakness": "Secure Boot, UEFI security, bootkit protection limitations",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/147/final"]
+  },
+  {
+    "id": 3024,
+    "domain": 3,
+    "text": "A security architect is reviewing a proposed architecture where a web application accepts XML input from users to configure reports. The XML parser is a full-featured parser that resolves external entities. A security engineer flags this as a critical risk. What specific attack does this enable?",
+    "options": [
+      "XML Injection — attackers can modify XML structure to change application behavior",
+      "XML External Entity (XXE) injection — a full-featured XML parser that resolves external entities allows attackers to: read arbitrary local files (file:///etc/passwd), perform server-side request forgery (SSRF) to internal services, cause denial of service via entity expansion (Billion Laughs attack), and in some configurations achieve remote code execution — disable external entity resolution in the parser configuration immediately",
+      "XML Schema Validation Bypass — attackers can submit malformed XML that bypasses input validation",
+      "XPATH Injection — attackers can manipulate XML database queries through malicious input"
+    ],
+    "answer": 1,
+    "explanation": "XXE (XML External Entity) is OWASP Top 10 A05:2021. External entities in XML reference external resources via URIs. A malicious XML payload: <!DOCTYPE foo [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><foo>&xxe;</foo> causes the server to read /etc/passwd and return its contents. Impacts: (1) Local file disclosure; (2) SSRF to internal services (cloud metadata endpoints, internal APIs); (3) Billion Laughs DoS via nested entity expansion; (4) RCE in certain parser/OS combinations. Fix: disable DTD processing and external entity resolution in the XML parser configuration.",
+    "weakness": "XXE injection, XML parser security, SSRF",
+    "references": ["https://owasp.org/www-project-top-ten/", "https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing"]
+  },
+  {
+    "id": 3025,
+    "domain": 3,
+    "text": "An organization is adopting DevSecOps. The security team wants to implement 'security as code' — integrating security controls into CI/CD pipelines. A developer argues that pipeline security checks will slow development. How should the security team respond to balance security and velocity?",
+    "options": [
+      "Security checks should be optional in CI/CD — developers can choose to run them before major releases",
+      "Security as code, properly implemented, accelerates development by catching issues early when they are cheapest to fix: SAST (Static Application Security Testing) runs in parallel with build steps; SCA (Software Composition Analysis) checks dependencies during dependency resolution; secret scanning runs on every commit; DAST (Dynamic Application Security Testing) runs in the test environment; critical findings are pipeline gates, informational findings are non-blocking — the goal is shift-left, not add-right",
+      "All security checks should be blocking gates in the CI pipeline to ensure no security issues reach production",
+      "Implement security checks only in the production deployment pipeline, not in development CI — this minimizes developer friction"
+    ],
+    "answer": 1,
+    "explanation": "DevSecOps balances security and velocity through thoughtful integration: (1) Shift-left: find issues during development when they cost $1 to fix vs. $100 in production; (2) Parallelization: security scans run concurrently with builds, not sequentially after; (3) Risk-tiered gating: critical findings block, informational findings are reported but don't block; (4) Incremental scanning: scan only changed code, not full codebase per commit; (5) Developer feedback: issues reported in the developer's IDE and PR, not in a separate portal. This approach typically reduces security remediation costs while increasing release velocity.",
+    "weakness": "DevSecOps, CI/CD security, shift-left security",
+    "references": ["https://www.nist.gov/pubs/sp/800/218/final", "https://owasp.org/www-project-devsecops-guideline/"]
+  }
+]

@@ -1,0 +1,377 @@
+[
+  {
+    "id": 5001,
+    "domain": 5,
+    "text": "A large enterprise implements Role-Based Access Control (RBAC). After three years, a security audit reveals that 65% of users have accumulated permissions far beyond their current job functions due to role creep from promotions, transfers, and project-based access grants. What is the MOST effective remediation strategy?",
+    "options": [
+      "Delete all user accounts and re-provision from scratch based on current job descriptions",
+      "Implement an automated identity governance solution with quarterly access certification campaigns: data owners and managers certify each user's access; entitlements not certified within the review window are automatically revoked; implement SoD (Separation of Duties) policies to prevent conflicting roles; conduct an immediate remediation pass to revoke obviously outdated access and establish a sustainable ongoing access review program",
+      "Notify all users of their current access and ask them to self-report access they no longer need",
+      "Increase the number of RBAC roles to make them more granular — role granularity prevents over-provisioning"
+    ],
+    "answer": 1,
+    "explanation": "Role creep (permission accumulation over time) is a common RBAC failure mode. Remediation requires: (1) Automated access certification with manager/owner sign-off for each entitlement; (2) Time-bound access for project-based grants; (3) Automated provisioning tied to HR system (when role changes, permissions change automatically); (4) SoD enforcement to prevent high-risk access combinations; (5) Continuous monitoring for anomalous access. Self-reported revocation is ineffective — users keep access they 'might need.' More granular roles addresses future grants but not existing role creep.",
+    "weakness": "RBAC, role creep, access certification, identity governance",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/162/final"]
+  },
+  {
+    "id": 5002,
+    "domain": 5,
+    "text": "A financial institution is implementing Privileged Access Management (PAM) for their 50 database administrators. The PAM vendor proposes storing all database credentials in a vault, with DBAs checking out time-limited credentials. A DBA argues they need 'always-on' admin access for emergency response. How should this conflict be resolved?",
+    "options": [
+      "Grant always-on admin access to senior DBAs and time-limited access to junior DBAs based on seniority",
+      "Implement PAM with emergency 'break-glass' procedures: standard operations use checked-out time-limited credentials with session recording; documented emergency access procedures allow immediate credential checkout with enhanced logging and mandatory post-incident review; the PAM system can be configured for expedited checkout (30 seconds) meeting operational requirements while maintaining audit trail — eliminating standing admin privileges",
+      "Abandon PAM implementation — operational requirements prevent applying least privilege to database administrators",
+      "Allow DBAs to keep local admin accounts as backup while also implementing PAM — dual-access ensures no operational disruption"
+    ],
+    "answer": 1,
+    "explanation": "Standing privileged access is a primary source of breach escalation. PAM with emergency procedures addresses the 'always-on' objection: (1) Normal operations: checkout credential, execute task, automatic credential rotation after check-in; (2) Emergency: PAM emergency workflow provides immediate access (seconds) with mandatory justification, enhanced logging, and post-incident review; (3) Break-glass accounts: separate ultra-privileged accounts for true emergencies, with access triggering immediate alerts to security and management. No legitimate operational requirement requires unmonitored, permanent admin access.",
+    "weakness": "Privileged Access Management, break-glass procedures, least privilege",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final"]
+  },
+  {
+    "id": 5003,
+    "domain": 5,
+    "text": "An organization deploys Single Sign-On (SSO) using SAML 2.0. A security researcher reports that the SAML assertion validation doesn't verify the XML signature before processing attribute data. What class of attack does this enable?",
+    "options": [
+      "Session fixation — the SSO session token can be reused across different user sessions",
+      "SAML Signature Wrapping (XSW) attack: by manipulating the XML structure, an attacker can inject malicious assertions while the legitimate signature remains valid on a different part of the document; the signature validation passes (it validates the original signed element) but the application uses the injected unsigned data; this enables authentication bypass and privilege escalation without valid credentials",
+      "XML Injection — the attacker can insert malicious XML that changes SAML assertion attributes",
+      "Cross-Site Request Forgery via the SAML consumer endpoint — the endpoint accepts cross-origin POST requests"
+    ],
+    "answer": 1,
+    "explanation": "SAML Signature Wrapping exploits XML signature validation order: (1) Attacker duplicates the assertion in the XML; (2) Original signed assertion is moved or wrapped; (3) New unsigned assertion with attacker-chosen attributes is inserted where the SP application reads from; (4) Signature validation succeeds (validates the original element); (5) Application processes the unsigned attacker-controlled assertion. Result: authentication as any user including admins. Fix: validate signature BEFORE processing any assertion attributes, use strict schema validation, validate that the signed element is the assertion being processed.",
+    "weakness": "SAML security, signature wrapping, SSO vulnerabilities",
+    "references": ["https://owasp.org/www-project-enterprise-security-api/", "https://www.usenix.org/conference/usenixsecurity12/technical-sessions/presentation/armando"]
+  },
+  {
+    "id": 5004,
+    "domain": 5,
+    "text": "An organization is deploying a biometric authentication system for physical access control and wants to minimize false acceptance rates (FAR) without excessively increasing false rejection rates (FRR). The security team proposes setting the matching threshold very high to minimize FAR. What is the technical trade-off they must understand?",
+    "options": [
+      "Higher threshold always improves security — there is no trade-off between FAR and FRR",
+      "FAR and FRR are inversely related: raising the matching threshold (more strict) decreases FAR (fewer unauthorized users accepted) but increases FRR (more authorized users rejected); the Crossover Error Rate (CER/EER) is where FAR=FRR and represents the optimal balance point; for high-security areas, low FAR is prioritized even if FRR is elevated; the organization must decide based on the relative cost of false acceptance (security breach) vs false rejection (operational disruption and user frustration)",
+      "FAR and FRR are independent variables — adjust each independently to achieve desired performance",
+      "Set the threshold at CER to minimize total errors — CER is always the optimal security threshold"
+    ],
+    "answer": 1,
+    "explanation": "Biometric error rates: FAR = probability of accepting an unauthorized user; FRR = probability of rejecting an authorized user. These are inversely related via the matching threshold. CER (Equal Error Rate) is where FAR=FRR — it's a benchmark for comparing systems, NOT necessarily the optimal operating point. Security decision: For a data center (high security), accept high FRR to minimize FAR. For employee entry points (operational efficiency), balance toward lower FRR. The choice is a business/security risk decision, not a purely technical one.",
+    "weakness": "Biometric authentication, FAR/FRR trade-off, CER",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/76/3/final"]
+  },
+  {
+    "id": 5005,
+    "domain": 5,
+    "text": "An identity governance audit reveals that a service account used by a critical application has Domain Admin privileges in Active Directory. The application vendor claims 'the application requires Domain Admin to function.' How should the security team evaluate this claim?",
+    "options": [
+      "Accept the vendor's claim — enterprise software vendors understand their access requirements better than security teams",
+      "Reject the claim without analysis — no application legitimately requires Domain Admin for normal operations",
+      "Conduct a privilege analysis: use tools to identify which specific AD operations the application actually performs, determine the minimum permission set required for those operations, engage the vendor with specific technical evidence, create a custom service account with only required permissions in a test environment, verify functionality — Domain Admin for service accounts is almost always over-provisioning resulting from laziness or lack of technical knowledge rather than true requirement",
+      "Grant Domain Admin temporarily during business hours only — time-limiting the privilege reduces risk"
+    ],
+    "answer": 2,
+    "explanation": "Domain Admin for service accounts is a critical security risk and almost universally unnecessary. Real analysis approach: (1) Enable AD auditing to log all operations performed by the service account; (2) Use PowerShell/AD Diagnostics to identify the minimum permission set actually needed; (3) Create a test environment with minimal permissions and verify application functionality; (4) Engage vendor with specific technical findings — not just 'requires Domain Admin.' Legitimate application needs are typically: read access to specific OUs, write to specific attributes, service principal management. Domain Admin grants full domain control — unacceptable as a service account permission.",
+    "weakness": "Service account privileges, Active Directory security, least privilege",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 5006,
+    "domain": 5,
+    "text": "A company implements password policies requiring: minimum 8 characters, uppercase + lowercase + number + symbol, and 90-day mandatory change. A security analyst argues this policy actually weakens security. What is the evidence-based argument against this traditional password policy?",
+    "options": [
+      "The policy is correct and aligned with current security best practices — complexity and rotation are the most important factors",
+      "NIST SP 800-63B (2017) research shows: complexity requirements cause predictable patterns (Password1!, Summer2024!) that are easily guessed; 90-day rotation causes minor variations (Password1! → Password2!) rather than strong new passwords; frequent changes train users to write down passwords; the evidence-based approach: long passphrases (minimum 15+ characters) without mandatory complexity, rotation only when compromise is suspected, check against breached password databases, and eliminate periodic mandatory changes",
+      "The policy should add multi-factor authentication but otherwise the password requirements are appropriate",
+      "Only the 90-day rotation is problematic — complexity requirements improve password strength without the downsides"
+    ],
+    "answer": 1,
+    "explanation": "NIST SP 800-63B Rev 3 (2017) reversed decades of password guidance based on research: (1) Complexity requirements produce predictable patterns (predictable substitutions like @ for a, ! at end); (2) Periodic rotation causes incremental changes rather than strong new passwords; (3) Longer passwords are exponentially stronger than shorter complex ones; (4) Check passwords against known breach databases (HaveIBeenPwned API) at creation. Current recommendations: minimum 15 characters, maximum 64+, no forced rotation, no complexity requirements, MFA for high-risk accounts.",
+    "weakness": "Password policy, NIST SP 800-63B, passphrase vs complexity",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final"]
+  },
+  {
+    "id": 5007,
+    "domain": 5,
+    "text": "An organization uses Kerberos authentication in its Active Directory environment. A penetration tester requests a service ticket for the 'MSSQLSvc/dbserver.corp.local' service without authenticating to the service — just requesting the ticket. Later, they offline brute-force the ticket. What Kerberos attack is this?",
+    "options": [
+      "Pass-the-Hash — the attacker is using a cached password hash to authenticate",
+      "Kerberoasting: any authenticated domain user can request Kerberos service tickets (TGS) for any service with a registered SPN; the TGS ticket is encrypted with the service account's NTLM hash; an attacker exports the ticket and cracks it offline using Hashcat/John — no interaction with the target service is required; cracking speed depends entirely on the service account's password strength; defend with: long random service account passwords (25+ characters), managed service accounts (gMSA), and Privileged Identity Protection",
+      "Pass-the-Ticket — the attacker is injecting a stolen Kerberos ticket into their session",
+      "Golden Ticket — the attacker has compromised the KRBTGT account to forge authentication tickets"
+    ],
+    "answer": 1,
+    "explanation": "Kerberoasting (coined by Tim Medin, DerbyCon 2014): (1) Any domain user can request TGS tickets for services with SPNs; (2) TGS ticket is encrypted with service account's NTLM hash; (3) Export ticket (e.g., using Mimikatz, Impacket GetUserSPNs.py); (4) Offline brute force — no network interaction needed, no failed logins, no account lockout. Effectiveness depends on password strength. Defense: (1) gMSA (Group Managed Service Accounts) with 120-character random auto-rotating passwords; (2) AES encryption for Kerberos (not RC4); (3) Monitor for unusual TGS requests.",
+    "weakness": "Kerberoasting, Active Directory attacks, service account security",
+    "references": ["https://attack.mitre.org/techniques/T1558/003/", "https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 5008,
+    "domain": 5,
+    "text": "A healthcare organization is implementing federated identity with several partner organizations for a patient records sharing portal. Patients must authenticate once and access records at multiple healthcare providers. Which protocol stack BEST supports this cross-organizational federated identity scenario?",
+    "options": [
+      "Kerberos across all organizations using a shared Active Directory forest with bidirectional trust",
+      "SAML 2.0 for cross-domain SSO with OpenID Connect (OIDC) for the patient-facing mobile application: SAML provides the enterprise-grade federation standard between healthcare organizations with existing IdPs; OIDC provides modern OAuth 2.0-based authentication suitable for mobile/web apps; a federation broker (identity hub) manages the trust relationships between all participating organizations without requiring direct trust between every pair",
+      "Username and password synchronized across all partner organizations using LDAP replication",
+      "PKI client certificates issued by a shared CA — certificate authentication provides the strongest cross-organizational identity assurance"
+    ],
+    "answer": 1,
+    "explanation": "Healthcare federation requirements: (1) Cross-organizational SSO between established enterprise IdPs (SAML 2.0 is the standard for this use case, used in DirectTrust and TEFCA frameworks); (2) Patient-facing mobile/web access (OIDC/OAuth 2.0 with PKCE is the modern standard for consumer apps); (3) A federation broker (hub-and-spoke model) reduces trust relationships from O(N²) to O(N) — each organization trusts the hub rather than each other. This architecture is used in health information exchanges (HIEs) and aligns with SMART on FHIR standards.",
+    "weakness": "Federated identity, SAML 2.0, OIDC, healthcare federation",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/c/final", "https://hl7.org/fhir/smart-app-launch/"]
+  },
+  {
+    "id": 5009,
+    "domain": 5,
+    "text": "A cloud administrator uses a single AWS root account for all administrative operations, storing the root credentials in a shared team password vault. A security review flags this as critical. What are the specific risks and required remediation?",
+    "options": [
+      "The shared vault is the problem — store root credentials in an individual's personal vault instead",
+      "AWS root account has unrestricted access to all AWS services that cannot be limited by IAM policies; using it for regular operations and sharing credentials creates: (1) No individual accountability for root-level actions; (2) Inability to revoke access when team members leave without changing root password; (3) Root account operations bypass CloudTrail attribution; remediation: create individual IAM users/roles with least privilege for all administrative operations, delete root access keys, enable MFA on root account, store root credentials in a dedicated vault accessible only for break-glass scenarios with enhanced monitoring",
+      "Enable AWS CloudTrail to monitor root account usage — visibility is sufficient mitigation",
+      "Root account sharing is acceptable in small teams — implement per-user IAM accounts only when the team grows beyond 10 people"
+    ],
+    "answer": 1,
+    "explanation": "AWS root account is the most privileged identity in an AWS account and cannot be restricted by IAM policies. AWS explicitly recommends: (1) Never use root for daily operations; (2) Enable MFA on root; (3) Delete root access keys; (4) Store root credentials offline for break-glass only. Shared credentials eliminate individual accountability — CloudTrail shows 'root' performed an action but cannot attribute to a specific person. When team members leave, all root-using scenarios require a password change. Individual IAM roles with least privilege should handle all regular operations.",
+    "weakness": "AWS root account security, cloud IAM, shared credential risks",
+    "references": ["https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"]
+  },
+  {
+    "id": 5010,
+    "domain": 5,
+    "text": "A zero-trust network access (ZTNA) implementation requires continuous authentication. During a work session, the system detects the user's typing pattern has changed significantly from their established baseline. What should the system do, and what is this capability called?",
+    "options": [
+      "Immediately terminate the session — any change in typing pattern indicates account takeover",
+      "This is continuous/adaptive authentication using behavioral biometrics; the anomaly triggers a step-up authentication challenge (re-verify with MFA) rather than immediate termination — the changed typing pattern may indicate account takeover OR may reflect a legitimate change (injury, stress, fatigue); step-up authentication confirms the user's identity through a second factor while preserving session continuity; if step-up fails, then terminate and require full re-authentication",
+      "Log the anomaly for review but take no action — typing patterns vary naturally and should not trigger security responses",
+      "Apply this to the user's risk score and increase monitoring intensity without alerting the user"
+    ],
+    "answer": 1,
+    "explanation": "Continuous authentication (NIST SP 800-63B discusses this as part of re-authentication requirements) uses behavioral signals to maintain assurance that the authenticated user is still the legitimate user throughout a session. Behavioral biometrics (typing dynamics, mouse movement, gait for mobile) provide passive continuous signals. When a significant anomaly is detected: (1) Step-up authentication (request additional factor) — confirms or denies the user's identity; (2) Graceful response — doesn't break legitimate sessions from natural behavior variation; (3) Tiered response — escalating actions based on risk score. Immediate termination creates excessive false positives and user friction.",
+    "weakness": "Continuous authentication, behavioral biometrics, adaptive authentication",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final"]
+  },
+  {
+    "id": 5011,
+    "domain": 5,
+    "text": "An attacker performs a credential stuffing attack against a web application using 5 million username/password combinations from a previous breach. The attack succeeds in logging into 0.2% of accounts. The application uses strong unique passwords and MFA is not required. What control MOST effectively prevents credential stuffing at scale?",
+    "options": [
+      "Increase password complexity requirements — complex passwords are not found in breach databases",
+      "Multi-factor authentication eliminates credential stuffing effectiveness even with valid passwords; additionally: rate limiting login attempts, CAPTCHA, bot detection (TLS fingerprinting, behavioral analysis), IP reputation blocking, and checking credentials against HaveIBeenPwned breach databases at login — the 0.2% success rate (10,000 compromised accounts from 5M attempts) is economically significant and demonstrates why MFA is the critical control",
+      "Implement account lockout after 3 failed attempts — this stops credential stuffing attacks",
+      "Require password changes every 30 days — frequent rotation ensures breach databases are quickly outdated"
+    ],
+    "answer": 1,
+    "explanation": "Credential stuffing succeeds because users reuse passwords across sites. Controls ranked by effectiveness: (1) MFA — even with valid credentials, attackers cannot log in without the second factor; (2) Breach password database checking — reject passwords already in known breaches at creation/login; (3) Bot detection — most credential stuffing uses automated tools detectable by behavioral fingerprinting, JavaScript challenges, TLS fingerprint analysis; (4) Rate limiting — slows attacks but doesn't stop determined attackers; (5) Account lockout — creates DoS opportunity (attackers lockout legitimate users).",
+    "weakness": "Credential stuffing, MFA effectiveness, account takeover prevention",
+    "references": ["https://owasp.org/www-project-automated-threats-to-web-applications/"]
+  },
+  {
+    "id": 5012,
+    "domain": 5,
+    "text": "An organization's access control policy states that employees can only access data relevant to their current job function. After a reorganization, 1,200 employees changed roles. The identity system did not automatically update access — employees kept old access and gained new access. This resulted in excessive privilege for all affected employees. What access control principle failure does this represent?",
+    "options": [
+      "Fail-open design — the identity system should have blocked all access until roles were manually verified",
+      "This represents the failure of automated provisioning and de-provisioning tied to HR lifecycle events; proper identity governance requires: HR system integration with the IAM system so role changes trigger automatic access reviews and updates (joiners-movers-leavers automation); access should be provisioned based on current role, not accumulated over time; the 'mover' scenario (role change) requires both provisioning new access AND de-provisioning old access — this is a critical gap in identity lifecycle management",
+      "Separation of Duties violation — employees should not manage their own access transitions",
+      "The policy is too strict — employees transitioning roles legitimately need time to complete handover work with their old access"
+    ],
+    "answer": 1,
+    "explanation": "The Joiner-Mover-Leaver (JML) lifecycle is fundamental to identity governance: (1) Joiner: new employee → provision access based on role; (2) Mover: role change → de-provision old access, provision new access (bidirectional update); (3) Leaver: termination → de-provision all access immediately. Failure of the 'Mover' process creates role creep across entire reorganizations. Proper implementation: HR system of record triggers IAM updates via SCIM or direct integration; automated de-provisioning of old role, automated provisioning of new role; manager certification within 30 days of change.",
+    "weakness": "Identity lifecycle management, JML process, automated provisioning",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/c/final"]
+  },
+  {
+    "id": 5013,
+    "domain": 5,
+    "text": "A security analyst discovers that a developer's personal GitHub account contains a public repository with AWS access keys embedded in commit history, even though the keys were later removed via a new commit. The keys have been in the history for 3 days. What is the correct response?",
+    "options": [
+      "The keys were removed from the code — the risk is mitigated once the secrets are no longer in the main branch",
+      "Git history is immutable — the keys remain visible in all historical commits even after being removed via new commits; immediate response: (1) Rotate/invalidate the AWS keys immediately (treat as compromised); (2) Audit CloudTrail for any unauthorized API calls during the 3-day exposure; (3) Remove keys from git history using git filter-branch or BFG Repo Cleaner and force-push (after team coordination); (4) Scan for any secondary credentials or data that may have been accessed using the compromised keys; (5) Implement pre-commit secrets scanning to prevent future occurrences",
+      "Contact GitHub to remove the repository — third-party platforms are responsible for preventing credential exposure",
+      "Since the repository belongs to a personal account, it is outside the organization's security scope"
+    ],
+    "answer": 1,
+    "explanation": "Git history is permanent in standard usage — removing a secret via a new commit leaves it visible in all previous commits. Anyone who cloned or forked the repo has the full history. The 3-day exposure means: (1) GitHub's secret scanning may have already flagged this (GitHub scans public repos for AWS keys); (2) Automated scrapers continuously harvest credentials from public repos; (3) The keys must be treated as fully compromised. Tools: git filter-branch or BFG Repo Cleaner to purge from history. Prevention: GitGuardian, AWS git-secrets, Gitleaks pre-commit hooks.",
+    "weakness": "Secrets management, git history security, credential exposure response",
+    "references": ["https://owasp.org/www-project-top-ten/", "https://docs.github.com/en/code-security/secret-scanning"]
+  },
+  {
+    "id": 5014,
+    "domain": 5,
+    "text": "An organization deploys an attribute-based access control (ABAC) system. A user attribute 'department=Finance' and a resource attribute 'classification=Financial-Confidential' with policy 'department matches resource classification AND time=business-hours AND location=corporate-network' controls access. How does ABAC differ from RBAC in addressing this specific scenario?",
+    "options": [
+      "ABAC and RBAC are functionally equivalent — ABAC is just a more complex implementation of RBAC",
+      "ABAC enables dynamic, context-aware access decisions combining multiple attributes simultaneously: user attributes (department), resource attributes (classification), environmental attributes (time, location), and action attributes — this cannot be expressed in pure RBAC without creating an explosion of roles (FinanceUser-BusinessHours-OnCorporateNetwork-FinancialConfidential); ABAC's policy language allows fine-grained, context-sensitive decisions that scale better than role multiplication in RBAC",
+      "RBAC is more secure than ABAC — ABAC's complexity creates more security vulnerabilities",
+      "ABAC is appropriate only for cloud environments — RBAC should be used for on-premises systems"
+    ],
+    "answer": 1,
+    "explanation": "RBAC limitations: expressing context-sensitive access requires role explosion (a separate role for every combination of user type, time, location, resource type). ABAC advantages: (1) Policy-based: 'IF user.department == resource.classification AND env.time == business_hours AND env.location == corporate_network → ALLOW'; (2) Scales to fine-grained decisions without role proliferation; (3) Dynamic: attributes evaluated at runtime reflect current state (user's current network location, current time); (4) XACML is the standard policy language for ABAC. ABAC is more complex to implement but more expressive for modern, dynamic access requirements.",
+    "weakness": "ABAC vs RBAC, attribute-based access control, dynamic authorization",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/162/final"]
+  },
+  {
+    "id": 5015,
+    "domain": 5,
+    "text": "A security team discovers that a threat actor used a technique called 'Pass-the-Hash' to move laterally through a Windows Active Directory environment after compromising one workstation. Describe the attack mechanism and the PRIMARY control that prevents it.",
+    "options": [
+      "Pass-the-Hash involves cracking NTLM hashes — prevent it by requiring complex passwords that resist cracking",
+      "Pass-the-Hash exploits NTLM authentication: Windows uses NTLM hashes (not plaintext passwords) for authentication in certain scenarios; an attacker with local admin access extracts NTLM hashes from LSASS memory (using Mimikatz) and authenticates to other systems by presenting the hash directly — no password cracking required; PRIMARY prevention: enable Windows Defender Credential Guard (virtualization-based security isolates LSASS in a separate process inaccessible to kernel-level code) and disable NTLM where Kerberos is available",
+      "Pass-the-Hash requires compromising the Domain Controller — protecting the DC prevents the attack",
+      "Pass-the-Hash is a phishing attack — multi-factor authentication on email prevents lateral movement"
+    ],
+    "answer": 1,
+    "explanation": "NTLM Pass-the-Hash: NTLM authentication accepts the hash itself as the authentication credential — the server challenges with a nonce, the client responds with NTLM_hash(nonce+hash) — no plaintext password needed. Attacker flow: (1) Compromise workstation (phishing/exploit); (2) Escalate to local admin; (3) Dump LSASS with Mimikatz to get NTLM hashes; (4) Use hash to authenticate to other systems in the domain. Prevention stack: Credential Guard (VSM isolates LSASS), Protected Users Security Group (forces Kerberos, prevents NTLM for members), disable NTLMv1, restrict NTLM where Kerberos available, local admin password solution (LAPS) to prevent hash reuse across workstations.",
+    "weakness": "Pass-the-Hash, NTLM authentication, Credential Guard",
+    "references": ["https://attack.mitre.org/techniques/T1550/002/", "https://docs.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection"]
+  },
+  {
+    "id": 5016,
+    "domain": 5,
+    "text": "An organization uses OAuth 2.0 for API authorization. An attacker redirects the authorization flow by registering 'https://legit-company.com.attacker.com' as a redirect URI and tricks a user into authorizing. What vulnerability is exploited and what is the prevention?",
+    "options": [
+      "Open Redirect — the attacker exploits a redirect in the application that doesn't validate the destination",
+      "OAuth Authorization Code Redirect URI manipulation: if the authorization server doesn't strictly validate the redirect_uri against a pre-registered whitelist, an attacker can substitute their own URI receiving the authorization code; the code is then exchanged for tokens by the attacker; prevention: strict redirect URI validation with exact string matching (not prefix matching or wildcard); register exact redirect URIs; never use wildcard or pattern-based matching; combine with PKCE to bind the authorization code to the initiating client",
+      "Cross-Site Request Forgery — the attacker forges a request to the authorization server",
+      "Clickjacking — the attacker overlays the authorization page in an invisible iframe"
+    ],
+    "answer": 1,
+    "explanation": "OAuth redirect URI attacks exploit lenient validation: if the auth server accepts any URI containing 'legit-company.com' or uses prefix matching, the attacker's subdomain passes. Authorization code delivered to attacker's endpoint → exchanged for access token. Prevention: (1) Exact string matching for redirect URIs against pre-registered list; (2) PKCE (code_challenge/code_verifier) cryptographically binds the authorization code to the original client — stolen code cannot be exchanged without the code_verifier; (3) State parameter for CSRF protection; (4) Short-lived authorization codes (60 seconds). RFC 6749 requires exact redirect URI matching.",
+    "weakness": "OAuth redirect URI, authorization code interception, PKCE",
+    "references": ["https://www.rfc-editor.org/rfc/rfc6749", "https://www.rfc-editor.org/rfc/rfc7636"]
+  },
+  {
+    "id": 5017,
+    "domain": 5,
+    "text": "A security review finds that a medical device manufacturer's remote monitoring platform allows technicians to access any patient's device using a shared generic service account. All technicians use the same credentials. What IAM principle failures does this represent?",
+    "options": [
+      "Only a password complexity violation — require stronger credentials for the shared account",
+      "Multiple critical failures: (1) No individual accountability — cannot determine which technician accessed which patient's device; (2) Violation of least privilege — shared account likely has access to all patient devices; (3) No separation of duties — any technician can access any device; (4) HIPAA violation — access to PHI must be individually attributable; (5) No access review capability — cannot certify appropriate access for individuals; remediation: individual accounts with role-based access to only assigned patients/devices and complete audit logging",
+      "This is acceptable for service accounts — individual accounts create operational overhead",
+      "Add MFA to the shared account — this resolves the authentication weakness while maintaining operational efficiency"
+    ],
+    "answer": 1,
+    "explanation": "Shared service accounts in healthcare settings violate multiple frameworks: (1) HIPAA Security Rule requires unique user identification — shared accounts are explicitly non-compliant; (2) HITECH Act audit trail requirements — no individual attribution; (3) Least privilege — shared account access to all patients; (4) NIS2 and GDPR for EU operations. For medical devices: individual technician accounts, role-based access limiting each technician to devices in their responsibility scope, complete audit logging with user attribution, emergency access procedures for on-call coverage, and quarterly access reviews.",
+    "weakness": "Shared accounts, individual accountability, HIPAA compliance",
+    "references": ["https://www.hhs.gov/hipaa/for-professionals/security/index.html"]
+  },
+  {
+    "id": 5018,
+    "domain": 5,
+    "text": "An organization discovers that an API key with administrative access has been hardcoded in a mobile app downloaded 2 million times. The key has been exposed for 8 months. What is the CORRECT sequence of actions?",
+    "options": [
+      "Rotate the API key immediately and release an app update — the new key in the update resolves the exposure",
+      "Immediately revoke the compromised key (accept temporary service disruption); simultaneously provision and test a replacement key; analyze 8 months of API logs for unauthorized use patterns; determine if any data was exfiltrated or systems were modified; release app update with architectural fix (not hardcoded key — use PKCE/dynamic credential issuance or certificate pinning); assess breach notification obligations based on data accessed; implement secret scanning to prevent recurrence",
+      "Do not revoke the key — revocation disrupts 2 million users and is not proportional to the theoretical risk",
+      "Patch the mobile app first before revoking — a new app version should be available before breaking existing users"
+    ],
+    "answer": 1,
+    "explanation": "Exposed API key with 8-month window requires incident response priorities: (1) REVOKE IMMEDIATELY — continued exposure while you prepare has no justification; the disruption of revocation is preferable to continued compromise; (2) Forensic analysis — 8 months of API logs may reveal whether this was exploited; (3) Architectural fix — mobile apps should never have static admin API keys; server-side proxy with user-specific authorization is the correct pattern; (4) Breach assessment — if data was accessed, breach notification laws (GDPR 72-hour, US state laws) may apply; (5) 2M users × 8 months = significant exposure window that almost certainly attracted exploitation.",
+    "weakness": "API key compromise response, mobile app secrets, incident response sequence",
+    "references": ["https://owasp.org/www-project-mobile-security-testing-guide/"]
+  },
+  {
+    "id": 5019,
+    "domain": 5,
+    "text": "An organization's IT department uses a ticketing system that grants all IT staff read access to all tickets including HR escalations, legal matters, and executive communications. IT staff are not processing these tickets — they simply have access due to a default configuration. What is the MOST appropriate remediation?",
+    "options": [
+      "This is acceptable — IT staff need broad access to support the systems they manage",
+      "Implement data classification and category-based access controls in the ticketing system: HR tickets visible only to HR and assigned IT staff; legal tickets visible only to Legal and assigned resolvers; executive tickets requiring elevated access justification; this implements need-to-know within the technical support function — IT staff should only see tickets they have a business reason to access, configured at the ticketing system level rather than relying on policy alone",
+      "Encrypt all sensitive tickets — IT staff can still see the tickets but not read the content",
+      "Terminate the affected IT staff and implement background checks for all IT personnel going forward"
+    ],
+    "answer": 1,
+    "explanation": "Need-to-know principle: access to sensitive tickets should be limited to those with a legitimate business need. Even technical administrators supporting the system don't necessarily need to read the content of all tickets. Remediation: (1) Ticket categorization by sensitivity; (2) Role-based visibility controls; (3) Assigned resolver model — staff see only tickets in their queue; (4) Audit logging for sensitive ticket access; (5) Annual access review. This is a systemic configuration issue, not an individual conduct issue — the people with access may have done nothing wrong, but the access control design is incorrect.",
+    "weakness": "Need-to-know, ticketing system access control, least privilege",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/53/r5/final"]
+  },
+  {
+    "id": 5020,
+    "domain": 5,
+    "text": "An organization is implementing a PKI for issuing employee digital certificates for email signing and authentication. The Root CA certificate will be valid for 20 years. What is the PRIMARY risk consideration for a 20-year Root CA validity period?",
+    "options": [
+      "Administrative overhead — 20-year certificates require more frequent key generation operations",
+      "A 20-year Root CA validity period must account for cryptographic algorithm longevity: the algorithms and key sizes secure today (RSA-4096, SHA-256) may be deprecated or broken within 20 years due to advances in quantum computing or cryptanalysis; the Root CA private key must be protected for its entire validity period (HSM with offline storage, physical security); plan for cryptographic agility to migrate to post-quantum algorithms before the CA expires; additionally, the Root CA should not issue leaf certificates directly — intermediate CAs with shorter validity periods reduce the blast radius of compromises",
+      "Certificate revocation is impossible for certificates with 20-year validity — use shorter validity periods",
+      "Browser trust store compatibility is the primary concern — browsers may not recognize 20-year validity periods"
+    ],
+    "answer": 1,
+    "explanation": "Long-lived CA certificates create cryptographic longevity risks: (1) Algorithm deprecation — NIST plans to deprecate RSA-2048 by 2030; SHA-1 was deprecated in 2017; 20 years from now, current algorithms may be broken; (2) Key protection — a 20-year Root CA key must be protected for its entire life; HSMs, offline ceremonies, geographic distribution; (3) Post-quantum threat: NIST FIPS 203/204/205 post-quantum standards were finalized in 2024; organizations should plan migration paths; (4) Intermediate CAs: Root CA issues Intermediate CAs (2-5 year validity), Intermediates issue end-entity certs — this limits Root CA key exposure.",
+    "weakness": "PKI design, Root CA validity, cryptographic longevity",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final", "https://csrc.nist.gov/projects/post-quantum-cryptography"]
+  },
+  {
+    "id": 5021,
+    "domain": 5,
+    "text": "A user attempts to log in to a cloud application from a previously unseen country, using a new device, at 3 AM local time, immediately after a successful login from the corporate office 2 hours prior (making simultaneous physical presence impossible). What authentication principle should the system apply?",
+    "options": [
+      "Block the login — the impossible travel pattern indicates account compromise with certainty",
+      "Apply risk-based authentication: the combination of anomalies (new country, new device, unusual time, impossible travel) creates a high risk score triggering step-up authentication requirements and potential session termination; the system should: (1) Challenge with stronger MFA beyond normal; (2) Optionally terminate the concurrent session; (3) Notify the account holder via verified email/phone; (4) Require identity re-verification before granting access — escalating controls proportional to risk without blocking legitimate access outright",
+      "Allow the login — VPNs and international travel are common; geolocation-based blocking creates false positives",
+      "Log the anomaly for security team review tomorrow — real-time blocking is too aggressive for IAM decisions"
+    ],
+    "answer": 1,
+    "explanation": "Risk-based (adaptive) authentication uses contextual signals to dynamically adjust authentication requirements. Impossible travel (successful logins from physically incompatible locations in a short timeframe) is a high-confidence compromise indicator. However, automatic blocking creates service disruption for edge cases (VPN misconfiguration, user testing). The correct response escalates proportionally: stronger authentication challenge → notify the user → option to confirm/deny the session. If step-up fails, block and generate incident. This pattern is standard in modern cloud IAM (Azure AD Conditional Access, Okta ThreatInsight).",
+    "weakness": "Risk-based authentication, impossible travel detection, adaptive security",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final"]
+  },
+  {
+    "id": 5022,
+    "domain": 5,
+    "text": "An organization implements discretionary access control (DAC) for a file server. A department manager sets permissions allowing all department employees to read and write a shared folder. One employee with write access copies sensitive files to a personal folder and changes permissions to restrict it to themselves only. What limitation of DAC does this illustrate?",
+    "options": [
+      "DAC is fully effective — the employee used the system as intended; this is a policy violation, not a control failure",
+      "DAC allows data owners to grant access at their discretion — including to themselves with permissions to exclude others; this illustrates DAC's Trojan Horse vulnerability: any user with access can copy data and set restrictive permissions, removing the manager's ability to control the data; MAC (Mandatory Access Control) prevents this by enforcing classification-based rules that neither the data owner nor the user can override — providing stronger protection for sensitive data",
+      "The file server's operating system has a bug — write permission should not include permission to change access controls",
+      "DAC is appropriate for this scenario; the issue is the employee's behavior, which should be addressed through HR"
+    ],
+    "answer": 1,
+    "explanation": "DAC (Discretionary Access Control) allows subjects to control access to objects they own — including granting themselves exclusive access to copies of data. The Trojan Horse problem in DAC: a compromised or malicious user with read access can copy sensitive data and modify permissions on the copy to hide it. MAC (Mandatory Access Control) prevents this: classification labels are enforced by the OS/reference monitor, not the user — users cannot grant themselves access to higher-classified data or create objects with classification labels they're not authorized for.",
+    "weakness": "DAC limitations, MAC vs DAC, Trojan Horse problem",
+    "references": ["https://csrc.nist.gov/glossary/term/discretionary_access_control"]
+  },
+  {
+    "id": 5023,
+    "domain": 5,
+    "text": "A new hire in the Accounts Payable department is provisioned with access to: create vendor records, approve vendor payments, and reconcile bank statements. A security reviewer flags this as a control failure. Why?",
+    "options": [
+      "The access set is appropriate for an Accounts Payable employee — these are all normal AP functions",
+      "This violates Separation of Duties (SoD): the ability to create vendor records + approve payments creates an opportunity to create a fraudulent vendor and then approve payments to that vendor; adding bank reconciliation allows covering the fraud by adjusting reconciliation records; financial fraud controls require these three functions to be performed by different individuals; implement SoD enforcement in the ERP system preventing any single user from holding all three entitlements",
+      "Only the bank reconciliation access is problematic — create and approve functions are naturally paired in AP",
+      "This is a least privilege violation only — reduce to only the functions the employee needs for their specific role"
+    ],
+    "answer": 1,
+    "explanation": "This is a classic financial SoD violation enabling the 'fraud triangle': (1) Create fraudulent vendor (using vendor creation access); (2) Approve payment to fraudulent vendor (using payment approval access); (3) Conceal fraud in reconciliation records (using bank reconciliation access). This is one of the most common internal fraud scenarios and is specifically addressed in SOX Section 404, COSO framework, and AS/NZS 4360. Proper SoD: vendor creation (AP team), payment approval (manager or second AP employee), reconciliation (Finance/Controller team). ERP systems should enforce SoD policies through role conflict detection.",
+    "weakness": "Separation of Duties, financial fraud controls, ERP access control",
+    "references": ["https://www.isaca.org/resources/isaca-journal/issues/2013/volume-3/the-segregation-of-duties-in-erp-environments"]
+  },
+  {
+    "id": 5024,
+    "domain": 5,
+    "text": "A digital forensic investigator is analyzing an authentication log from a high-value target system. The log shows successful logins using certificate-based authentication from a user account, but the timestamps show the user logged in from three different geographic regions within 30 minutes. The user has a valid certificate. What should the investigator consider?",
+    "options": [
+      "The certificates are genuine — there is no breach; the user may have used a cloud service that routes traffic through multiple regions",
+      "Certificate cloning or key extraction should be investigated: if the certificate's private key was exfiltrated (from a compromised endpoint, weak key storage, or coerced disclosure), an attacker can authenticate from anywhere using the cloned certificate; the simultaneous multi-region logins suggest the private key may be in multiple hands; investigate: key storage mechanism (software vs HSM), endpoint compromise on the certificate holder's device, private key backup practices, and whether the certificate is from a smartcard (hardware-bound) or software token",
+      "The logins are impossible — revoke the certificate immediately and issue a new one",
+      "Certificate-based authentication is immune to this type of attack — further investigation is unnecessary"
+    ],
+    "answer": 1,
+    "explanation": "Certificate-based authentication strength depends entirely on private key protection. If the private key exists in software (PKCS#12 file, Windows Certificate Store), it can be exported and used on any system. Simultaneous multi-region logins with the same certificate indicate key cloning. Investigation path: (1) Was the certificate issued with non-exportable key? (2) Is the private key stored in hardware (TPM, smartcard)? (3) Review endpoint for key extraction indicators (Mimikatz, certificate dump tools); (4) LSASS dump could expose certificate keys from CNG; (5) If hardware-bound (smartcard/TPM), examine PKI logs for certificate issuance anomalies. Hardware binding is the primary control against key extraction.",
+    "weakness": "Certificate-based authentication, private key protection, hardware binding",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/157/r1/final"]
+  },
+  {
+    "id": 5025,
+    "domain": 5,
+    "text": "An organization implements passwordless authentication using FIDO2/WebAuthn with hardware security keys for all employees. A security manager asks whether this eliminates the need for multi-factor authentication controls. How should the security architect respond?",
+    "options": [
+      "Yes — passwordless FIDO2 eliminates all authentication risks; MFA is no longer necessary",
+      "FIDO2/WebAuthn with hardware security keys already implements MFA by nature: something you have (the hardware key) + something you know/are (PIN or biometric to activate the key); this is phishing-resistant MFA that provides stronger assurance than traditional password+SMS MFA; it does NOT eliminate all authentication risks: physical key loss/theft, device compromise before the authenticator challenge, and social engineering remain threats — but FIDO2 is the current gold standard for phishing-resistant authentication",
+      "Passwordless authentication is weaker than password+MFA — maintain both for defense in depth",
+      "FIDO2 eliminates phishing but requires supplemental authentication for high-value transactions"
+    ],
+    "answer": 1,
+    "explanation": "FIDO2/WebAuthn is phishing-resistant MFA by design: the hardware key (possession factor) must be activated by PIN or biometric (knowledge/inherence factor). Key properties: (1) Phishing-resistant — credentials are domain-scoped; a phishing site cannot capture credentials; (2) Hardware-bound — private keys cannot be extracted; (3) NIST SP 800-63B AAL3 when combined with a verified authenticator; (4) Replaces password+SMS with a stronger equivalent. Remaining risks: hardware key loss (mitigated by recovery codes/backup authenticator), device-level compromise (endpoint security), user social engineering to bypass authentication entirely.",
+    "weakness": "FIDO2/WebAuthn, passwordless authentication, MFA assurance levels",
+    "references": ["https://csrc.nist.gov/pubs/sp/800/63/b/final", "https://fidoalliance.org/specifications/"]
+  }
+]
